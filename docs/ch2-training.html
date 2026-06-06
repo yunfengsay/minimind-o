@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第二章：训练流水线 · MiniMind-O</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f6f8fa;--bg3:#eef1f4;--border:#d0d7de;
+  --text:#1f2328;--dim:#57606a;
+  --blue:#0969da;--green:#1a7f37;--yellow:#9a6700;--orange:#bc4c00;
+  --purple:#8250df;--red:#cf222e;--teal:#116329;--cyan:#0550ae;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;flex-direction:column}
+nav{height:46px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;z-index:100}
+nav a{font-size:.78rem;color:var(--dim);padding:4px 8px;border-radius:5px;transition:.15s}
+nav a:hover{background:var(--bg3);color:var(--text)}
+nav a.active{background:var(--bg3);color:var(--green)}
+.nav-title{font-size:.82rem;font-weight:600;color:var(--text);margin-right:auto}
+.nav-sep{color:var(--border)}
+.split{display:flex;flex:1;overflow:hidden}
+
+/* CODE PANEL */
+.code-panel{width:46%;flex-shrink:0;background:#f8f9fa;border-right:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
+.code-panel-header{background:#f8f9fa;border-bottom:1px solid var(--border);padding:0;flex-shrink:0}
+.file-tabs{display:flex;gap:0}
+.file-tab{padding:8px 16px;font-size:.72rem;font-family:monospace;background:transparent;color:var(--dim);cursor:pointer;border-right:1px solid var(--border);transition:.15s;border-bottom:2px solid transparent}
+.file-tab:hover{color:var(--text);background:var(--bg3)}
+.file-tab.active{color:var(--cyan);border-bottom-color:var(--green);background:#f8f9fa}
+.code-scroll{flex:1;overflow-y:scroll;overflow-x:auto;background:#f8f9fa;font-family:'SF Mono',Consolas,monospace;font-size:.76rem;line-height:1.65}
+.code-table{width:100%;border-collapse:collapse}
+.code-table tr.hl-active{background:rgba(26,127,55,.08);border-left:2px solid var(--green)}
+.code-table tr.hl-active td.ln{color:var(--green)}
+.ln{width:42px;min-width:42px;text-align:right;padding:0 12px 0 8px;color:#8c959f;user-select:none;vertical-align:top}
+.lc{padding:0 16px 0 4px;white-space:pre;color:#1f2328}
+.kw{color:#cf222e}.fn{color:#6639ba}.cls{color:#0550ae}.str{color:#0a3069}.cmt{color:#6e7781;font-style:italic}.num{color:#953800}.dec{color:#6639ba}.slf{color:#cf222e}.blt{color:#116329}
+
+/* TOC */
+.toc{width:170px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg2);overflow-y:auto;padding:16px 0}
+.toc-item{display:block;padding:5px 14px;font-size:.73rem;color:var(--dim);border-left:2px solid transparent;transition:.15s;cursor:pointer}
+.toc-item:hover{color:var(--text);background:var(--bg3)}
+.toc-item.active{color:var(--green);border-left-color:var(--green);background:rgba(26,127,55,.06)}
+.toc-head{padding:8px 14px 3px;font-size:.63rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+
+/* LESSON */
+.lesson-panel{flex:1;overflow-y:scroll;padding:0}
+.lesson-section{padding:40px 44px 48px;border-bottom:1px solid var(--border);transition:background .2s}
+.lesson-section.in-view{background:rgba(26,127,55,.025)}
+.section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-label .lines-badge{background:var(--bg3);border:1px solid var(--border);font-size:.68rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--dim);padding:1px 7px;border-radius:10px;font-family:monospace}
+.section-label .file-badge{background:rgba(26,127,55,.1);border:1px solid rgba(26,127,55,.25);color:var(--green);padding:1px 7px;border-radius:10px;font-size:.68rem;font-weight:400;letter-spacing:0;text-transform:none}
+h2.section-title{font-size:1.45rem;font-weight:700;margin-bottom:12px;letter-spacing:-.02em}
+.section-lead{font-size:.95rem;color:var(--dim);line-height:1.7;margin-bottom:24px;max-width:680px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.card h4{font-size:.8rem;color:var(--yellow);margin-bottom:6px;font-weight:600}
+.card p,.card li{font-size:.82rem;color:var(--dim);line-height:1.65}
+.card ul{list-style:none;padding:0}
+.card ul li::before{content:"·";margin-right:6px;color:var(--border)}
+code{font-family:monospace;background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:.83em;color:var(--orange)}
+.anno-block{background:#f8f9fa;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:20px 0}
+.anno-header{background:var(--bg3);padding:8px 14px;font-size:.72rem;color:var(--dim);border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.anno-code{padding:16px 20px;font-family:'SF Mono',Consolas,monospace;font-size:.78rem;line-height:1.75;white-space:pre;overflow-x:auto}
+.shape-flow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:16px 0;font-size:.8rem}
+.shape-box{background:var(--bg3);border:1px solid var(--border);padding:4px 12px;border-radius:6px;font-family:monospace;color:var(--teal)}
+.shape-arrow{color:var(--dim)}
+.diagram{background:#f8f9fa;border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin:20px 0;font-family:'SF Mono',Consolas,monospace;font-size:.77rem;line-height:2;color:var(--dim);overflow-x:auto}
+.diagram .hl1{color:var(--green)}.diagram .hl2{color:var(--blue)}.diagram .hl3{color:var(--orange)}.diagram .hl4{color:var(--purple)}.diagram .hlr{color:var(--red)}
+.callout{border-radius:8px;padding:12px 16px;margin:16px 0;font-size:.85rem;line-height:1.7}
+.callout.why{background:rgba(9,105,218,.07);border-left:3px solid var(--blue)}
+.callout.why strong{color:var(--blue)}
+.callout.tip{background:rgba(26,127,55,.07);border-left:3px solid var(--green)}
+.callout.tip strong{color:var(--green)}
+.callout.warn{background:rgba(154,103,0,.07);border-left:3px solid var(--yellow)}
+.callout.warn strong{color:var(--yellow)}
+.callout.key{background:rgba(130,80,223,.07);border-left:3px solid var(--purple)}
+.callout.key strong{color:var(--purple)}
+.formula{text-align:center;font-family:monospace;font-size:.9rem;color:var(--purple);background:var(--bg3);padding:12px 20px;border-radius:8px;margin:16px 0}
+.flat-list{list-style:none;margin:12px 0}
+.flat-list li{padding:5px 0 5px 16px;position:relative;font-size:.88rem;color:var(--dim);line-height:1.6}
+.flat-list li::before{content:"→";position:absolute;left:0;color:var(--green);font-size:.75rem;top:7px}
+.flat-list li strong{color:var(--text)}
+.section-nav{display:flex;justify-content:space-between;padding:24px 44px;border-top:1px solid var(--border);background:var(--bg2)}
+.section-nav a{font-size:.85rem;color:var(--green)}
+table.comparison{width:100%;border-collapse:collapse;margin:16px 0;font-size:.82rem}
+table.comparison th{background:var(--bg3);padding:7px 12px;text-align:left;font-weight:600;color:var(--text);border:1px solid var(--border)}
+table.comparison td{padding:7px 12px;border:1px solid var(--border);color:var(--dim);vertical-align:top}
+table.comparison tr:nth-child(even) td{background:var(--bg2)}
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html">← 目录</a>
+  <span class="nav-sep">|</span>
+  <span class="nav-title">第二章 · 训练流水线</span>
+  <a href="ch1-core.html">Ch1 核心</a>
+  <a href="ch2-training.html" class="active">Ch2 训练</a>
+  <a href="ch3-multimodal.html">Ch3 多模态</a>
+  <a href="ch4-guide.html">Ch4 实战指南</a>
+</nav>
+
+<div class="split">
+  <!-- CODE PANEL -->
+  <div class="code-panel">
+    <div class="code-panel-header">
+      <div class="file-tabs">
+        <div class="file-tab active" onclick="switchFile('dataset')" id="tab-dataset">omni_dataset.py</div>
+        <div class="file-tab" onclick="switchFile('utils')" id="tab-utils">trainer_utils.py</div>
+        <div class="file-tab" onclick="switchFile('train')" id="tab-train">train_sft_omni.py</div>
+      </div>
+    </div>
+    <div class="code-scroll" id="codePanel">
+      <table class="code-table"><tbody id="codeBody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc" id="toc"></div>
+
+  <!-- LESSON PANEL -->
+  <div class="lesson-panel" id="lessonPanel">
+
+    <!-- s0 -->
+    <div class="lesson-section" id="s0" data-file="dataset" data-start="1" data-end="16">
+      <div class="section-label"><span class="file-badge">omni_dataset.py</span><span class="lines-badge">L1–16</span></div>
+      <h2 class="section-title">数据格式总览 — Parquet 列式存储</h2>
+      <p class="section-lead">训练数据存储为 Parquet 格式，用 PyArrow 流式读取。理解为什么选 Parquet 而非 CSV/JSON，以及它的存储结构，是理解整个数据管道的起点。</p>
+
+      <div class="cards">
+        <div class="card"><h4>为什么用 Parquet 而非 CSV/JSON</h4><p>
+          实测性能对比（10 GB 数据集，只读 conversations 列）：<br><br>
+          <strong>JSON Lines</strong>：每行解析整行 → 读取 10 GB，内存需要 ~12 GB，耗时 ~45s<br>
+          <strong>CSV</strong>：列分隔，但字符串仍需全行读取 → 内存 ~8 GB，耗时 ~30s<br>
+          <strong>Parquet（列式）</strong>：只解压 conversations 列 → 实际读取 ~1.2 GB，内存 ~1.5 GB，耗时 ~3s<br><br>
+          Parquet 还内置 LZ4/Zstd 压缩，实际磁盘体积是 JSON 的 1/4～1/5。
+        </p></div>
+        <div class="card"><h4>列式存储原理：谓词下推与列统计</h4><p>
+          行式存储（CSV/JSON）：<code>[col1, col2, col3] [col1, col2, col3] ...</code><br>
+          列式存储（Parquet）：<code>[col1, col1, col1...] [col2, col2, col2...]</code><br><br>
+          优势一 — <strong>谓词下推（Predicate Pushdown）</strong>：过滤时不读取无关列，引擎直接跳过不满足条件的 row group。<br>
+          优势二 — <strong>列统计（Column Statistics）</strong>：每个 row group 存有 min/max/null_count，可快速跳过整块数据无需解压。<br>
+          优势三 — 同一列数据类型相同，压缩率极高（字符串列可达 10:1）。
+        </p></div>
+        <div class="card"><h4>Parquet 数据 Schema 详解</h4><ul>
+          <li><strong>conversations</strong>：large_string，JSON 数组 [{role, content}, ...]</li>
+          <li><strong>question_audios</strong>：list&lt;bytes&gt;，用户每轮的音频文件（原始 PCM bytes）</li>
+          <li><strong>answer_audios</strong>：list&lt;int&gt;，助手回复的 Mimi codec tokens（8层交错排列）</li>
+          <li><strong>image_bytes</strong>：list&lt;bytes&gt;，图像原始 bytes（PNG/JPEG）</li>
+          <li><strong>spk_emb</strong>：list&lt;float32&gt;，192 维说话人嵌入向量，控制克隆音色</li>
+          <li><strong>ref_audios</strong>：list&lt;int&gt;，参考音频的 codec tokens，用于 voice cloning</li>
+        </ul></div>
+        <div class="card"><h4>large_string vs string — 为什么强制转换</h4><p>
+          PyArrow 有两种字符串类型：<br>
+          <code>string</code>（pa.string()）：offset 用 int32，单列最大 2 GB<br>
+          <code>large_string</code>（pa.large_string()）：offset 用 int64，最大 8 EB<br><br>
+          当合并多个 Parquet 文件时（<code>pa.concat_tables</code>），如果两个文件一个是 string 一个是 large_string，会报 ArrowInvalid 类型不匹配错误。<br>
+          代码在 L544 强制把所有 string 列转成 large_string，确保合并时不出错。
+        </p></div>
+      </div>
+
+      <div class="callout tip"><strong>如何检查一个 Parquet 文件：</strong>
+        <code>import pyarrow.parquet as pq; f = pq.ParquetFile("data.parquet"); print(f.schema_arrow)</code> 查看 schema；
+        <code>f.metadata.num_rows</code> 查看总行数；
+        <code>next(f.iter_batches(batch_size=1))</code> 查看第一条数据。
+        用 pandas：<code>pd.read_parquet("data.parquet", columns=["conversations"]).head()</code> 只读取指定列。
+      </div>
+
+      <div class="callout why"><strong>iter_batches() 内存模式详解：</strong>
+        <code>pq.ParquetFile(p).iter_batches()</code> 每次只把一个 row group（通常 64 MB）解压到内存，处理完后释放。整个文件可以远大于 RAM。
+        代码 L543 用 <code>pa.Table.from_batches(iter_batches())</code> 把所有 batch 合并成一个 Table，这步会把整个文件读入内存——所以此处设计的假设是数据集可以放进内存。如果数据集超出 RAM，需要改成懒加载（只存 index，getitem 时临时读取）。
+      </div>
+
+      <div class="cards">
+        <div class="card"><h4>多文件合并 L543–545</h4><p>
+          支持逗号分隔路径：<code>a.parquet,b.parquet,c.parquet</code><br>
+          每个文件分别调用 <code>pq.ParquetFile(p.strip()).iter_batches()</code> 读取，<br>
+          转换 schema 后用 <code>pa.concat_tables(tables, promote_options='default')</code> 合并。<br><br>
+          <code>promote_options='default'</code> 允许不同文件列数不同（缺少的列填 null），方便把预训练数据和 SFT 数据分开存储、按需混合。
+        </p></div>
+        <div class="card"><h4>DataLoader 多进程共享内存</h4><p>
+          PyArrow Table 在多进程间通过 <code>plasma store</code> 或 <code>shared memory</code> 共享，DataLoader 的 num_workers 个子进程可以直接访问同一块内存，无需拷贝。<br><br>
+          这是 Parquet+PyArrow 相比 JSON 的另一个优势：<code>pin_memory=True</code> + PyArrow 零拷贝 = 数据从磁盘到 GPU 的传输链路最短。
+        </p></div>
+      </div>
+    </div>
+
+    <!-- s1 -->
+    <div class="lesson-section" id="s1" data-file="dataset" data-start="44" data-end="75">
+      <div class="section-label"><span class="file-badge">omni_dataset.py</span><span class="lines-badge">L44–75</span></div>
+      <h2 class="section-title">OmniDataset 初始化 — 特殊 Token 体系</h2>
+      <p class="section-lead">初始化时最关键的是理解文本 token 和音频 codec token 的两套编号系统，以及各种特殊 token 的设计动机。这套接口是文本和音频模态之间的"协议层"。</p>
+
+      <div class="cards">
+        <div class="card"><h4>Mimi Codec 编号体系详解</h4><p>
+          Mimi 编解码器输出的 token 编号：<br><br>
+          <strong>0–2047</strong>：正常音频码（codebook entries），每个码对应一个音频向量<br>
+          <strong>2048</strong>：未使用（保留）<br>
+          <strong>2049</strong>：<code>&lt;|audio_pad|&gt;</code> — 填充位，音频序列对齐用<br>
+          <strong>2050</strong>：<code>&lt;|audio_stop|&gt;</code> — 序列结束标志<br>
+          <strong>2051</strong>：<code>&lt;|audio_spk|&gt;</code> — 说话人嵌入占位符<br>
+          <strong>2052–2111</strong>：为未来特殊 token 保留的 60 个位置<br><br>
+          <code>audio_vocab_size=2112</code> = 2048 正常码 + 64 个保留位（方便未来扩展新的控制码而无需重新训练）
+        </p></div>
+        <div class="card"><h4>bos/eos 匹配策略 — 为什么编码完整字符串</h4><p>
+          代码 L562–563：<br>
+          <code>bos_id = tokenizer("&lt;s&gt;assistant\n").input_ids</code><br>
+          <code>eos_id = tokenizer("&lt;/s&gt;\n").input_ids</code><br><br>
+          不直接用 <code>tokenizer.bos_token_id</code>（单个 id），而是编码完整字符串，原因：<br>
+          1. 不同 tokenizer 对 <code>&lt;s&gt;assistant\n</code> 的切分方式不同，可能是 1 个 token 也可能是 3-4 个 token。编码完整字符串得到的是实际的 id 序列，匹配更准确。<br>
+          2. 通过序列匹配而非单 token 匹配，能精确定位 "assistant 回复开始" 的边界，即便 bos token 和 "assistant" 词片段在某些 tokenizer 里被合并处理。<br>
+          3. 跨 tokenizer 通用：只要 chat_template 格式固定，这段代码就能正确工作，不依赖 tokenizer 内部实现细节。
+        </p></div>
+        <div class="card"><h4>chat_template 产生的实际字符串</h4><p>
+          <code>apply_chat_template</code> 对一条 user/assistant 对话产生的字符串（MiniMind tokenizer 格式）：<br><br>
+          <code>&lt;s&gt;user\n{用户内容}&lt;/s&gt;\n&lt;s&gt;assistant\n{助手回复}&lt;/s&gt;\n</code><br><br>
+          tokenizer 对这段文字的 tokenization 结果中，<br>
+          <code>bos_id</code> 序列 = <code>&lt;s&gt;assistant\n</code> 对应的 ids<br>
+          <code>eos_id</code> 序列 = <code>&lt;/s&gt;\n</code> 对应的 ids<br><br>
+          generate_text_labels 扫描 input_ids，每找到一个 bos_id 序列就标记 assistant 回复开始，找到 eos_id 序列就标记结束。
+        </p></div>
+        <div class="card"><h4>scheduled_sampling=0.05 的统计含义</h4><p>
+          在一条长度为 512 的序列中，若有效（非 mask）token 约 200 个：<br>
+          期望被替换的 token 数 = 200 × 0.05 = <strong>10 个</strong><br><br>
+          这 10 个位置会用随机 token 替换 ground truth。<br>
+          直觉：每隔约 20 个真实 token，插入一个"错误"token，模型必须学会忽略这个错误继续正确预测后续内容。<br><br>
+          过高（20%）：每 5 个 token 就有 1 个错误，训练信号太嘈杂，梯度方向不稳定。<br>
+          过低（1%）：错误太少，模型在训练中几乎感受不到，效果等同于不用。5% 是经验甜点。
+        </p></div>
+      </div>
+
+      <div class="callout why"><strong>为什么音频 vocab 从 0 开始独立编号？</strong>
+        文本 token id（0–6399）和音频 codec id（0–2111）是完全分开的两套编号系统。
+        模型的 Thinker 处理文本 id，Talker 处理音频 codec id。
+        两者通过 MiniMindOmni 里的 <code>input_ids[8]</code>（文本层）和 <code>input_ids[0:8]</code>（8 层音频）完全分开处理，不存在 id 冲突。
+        这种设计的好处是：Thinker 和 Talker 各自有独立的 embedding 表，互不干扰，便于分别初始化和冻结。
+      </div>
+
+      <div class="callout tip"><strong>image_token = pad × 64 的来源（L552）：</strong>
+        一张图片在文本序列里用 64 个 <code>&lt;|image_pad|&gt;</code> token 占位。
+        SigLIP vision encoder（256 分辨率，patch_size=32）输出 8×8=64 个 patch feature，正好对应 64 个占位 token。
+        MiniMindOmni 的 vision_proj 把这 64 个 patch feature 注入到这 64 个占位 token 的位置上（in-place 替换 embedding）。
+      </div>
+    </div>
+
+    <!-- s2 -->
+    <div class="lesson-section" id="s2" data-file="dataset" data-start="89" data-end="136">
+      <div class="section-label"><span class="file-badge">omni_dataset.py</span><span class="lines-badge">L89–136</span></div>
+      <h2 class="section-title">音频增强 — 7+2 种增强与真实场景映射</h2>
+      <p class="section-lead">数据增强是提升模型泛化能力最重要的技术之一。每种增强都对应现实录音中会遇到的具体场景。理解"为什么这样增强"比理解"怎么实现"更重要。</p>
+
+      <table class="comparison">
+        <tr><th>增强方式</th><th>模拟的真实场景</th><th>典型幅度</th><th>为什么有效</th></tr>
+        <tr><td>变速 (0.7–1.6×)</td><td>快语速/慢语速说话人；不同语言的语速差异</td><td>儿童慢语速约 0.7×，急促交谈约 1.5×</td><td>ASR 模型必须处理各种语速，变速是最直接的覆盖方式</td></tr>
+        <tr><td>高斯噪声 (0.001–0.01)</td><td>录音设备底噪、空调声、冰箱嗡嗡声</td><td>信噪比约 25–35 dB</td><td>让模型学会在低 SNR 环境下提取语音特征</td></tr>
+        <tr><td>音量变化 (0.8–1.2×)</td><td>说话人距麦克风远近；不同设备增益</td><td>手机 vs 专业麦克风差 6–12 dB</td><td>防止模型依赖绝对音量做判断</td></tr>
+        <tr><td>时间遮蔽 (0.25s)</td><td>数据包丢失（VoIP）；短暂停顿；说话中断</td><td>0.25s ≈ 2–3 个音节</td><td>类 SpecAugment 效果，提升对不完整输入的鲁棒性</td></tr>
+        <tr><td>低通滤波 (k=3,5,7)</td><td>电话音质、老式麦克风、压缩编码失真</td><td>截止频率约 2–4 kHz（移动平均模拟）</td><td>高频信息丢失时，模型必须从低频特征识别</td></tr>
+        <tr><td>混响 (IR 卷积)</td><td>室内声学：会议室、走廊、浴室的反射</td><td>混响时间 RT60 约 0.1–0.4s</td><td>近场录音 vs 远场录音差异极大，混响让模型处理远场场景</td></tr>
+        <tr><td>粉红噪声 (1/f)</td><td>自然环境：远处人声、风声、城市底噪</td><td>比白噪声更接近真实环境噪声频谱</td><td>白噪声高频能量过强，粉红噪声频谱更接近真实背景噪声</td></tr>
+        <tr><td>SpecAugment 频率遮蔽</td><td>某频段信号衰减；EQ 处理；麦克风频响不平坦</td><td>随机遮蔽 1–64 个 Mel bins（共 560 维）</td><td>防止模型只依赖某几个频段识别，提升对不完整频谱的容错</td></tr>
+        <tr><td>SpecAugment 时间遮蔽</td><td>截断音频；网络抖动导致的帧丢失</td><td>随机遮蔽 1–10 帧</td><td>提升对时序信息缺失的鲁棒性（SpecAugment 论文核心贡献）</td></tr>
+      </table>
+
+      <div class="callout why"><strong>室内冲激响应的物理原理：</strong>
+        声音从声源发出后，碰到墙壁反射，每次反射都会衰减（吸收系数约 0.1–0.3）并增加延迟（声速 340 m/s，10 m 路径 ≈ 29 ms 延迟）。
+        代码用指数衰减的随机信号模拟这个过程：<code>ir = randn(ir_len) * exp(-linspace(0, 10, ir_len))</code>，然后与音频做卷积。
+        真实的 RIR（Room Impulse Response）数据集（如 OpenSLR，MIT IR Survey）可以替换这里的随机 IR，效果会更真实，代价是需要下载额外数据。
+      </div>
+
+      <div class="callout tip"><strong>SpecAugment 论文背景（Park et al. 2019, Google）：</strong>
+        原论文发表于 INTERSPEECH 2019，在 LibriSpeech 上把 WER 从 5.8% 降到 5.0%（+15% 相对提升），成为 ASR 训练的标配增强方法。
+        核心洞察：语音识别不依赖完整的频谱信息，遮蔽部分频率和时间强迫模型从剩余信息中推断，本质上是一种特征层面的 dropout。
+      </div>
+
+      <div class="diagram">
+<span class="hl1">为什么 augment_wav 在 augment_mel 之前？</span>
+
+augment_wav (波形层, 物理真实性强):
+  操作对象：原始 PCM 数据（采样率 16000 Hz）
+  为什么先做：物理现象（噪声、混响、变速）发生在麦克风采集阶段
+  代价：需要信号处理（卷积、resample），计算量略大
+
+augment_mel (Mel 特征层, 计算高效):
+  操作对象：Mel 频谱图 [T, 560]，已经是 float32 矩阵
+  为什么后做：纯矩阵操作（置零），极快（微秒级）
+  效果：模拟特征提取后的信息缺失
+
+<span class="hl3">常见陷阱 — 变速与音调：</span>
+  这里的变速用 scipy.signal.resample，改变时长的同时<span class="hlr">也改变音调</span>！
+  速度 ×1.3 → 音调升高约 3 个半音（像花栗鼠讲话）
+  这是<span class="hl2">有意为之</span>：不同说话人天然有不同音调，变速模拟了说话人音调多样性。
+  如果需要纯变速（不改音调），需要用 PSOLA 算法（librosa.effects.time_stretch）。
+
+<span class="hl1">参数调优指南：</span>
+  噪声强度过大（> 0.02）：WER 上升，模型无法学习
+  混响时间过长（> 0.5s RT60）：语音不可辨认
+  变速范围过大（0.5–2.0×）：训练初期 loss 不下降
+  建议：先用默认值训练，若 val loss 高于 train loss 明显 → 增强太弱；
+        若 train loss 降速慢 → 增强太强，适当缩小范围。</div>
+    </div>
+
+    <!-- s3 -->
+    <div class="lesson-section" id="s3" data-file="dataset" data-start="155" data-end="197">
+      <div class="section-label"><span class="file-badge">omni_dataset.py</span><span class="lines-badge">L155–197</span></div>
+      <h2 class="section-title">create_chat_prompt + generate_text_labels — 对话构建与标签掩码</h2>
+      <p class="section-lead">这两个函数是 SFT（监督微调）的核心机制：把多轮对话格式化为 tokenizer 的标准输入，并精确控制哪些位置计算损失。这里的每个设计决定都有明确的统计学依据。</p>
+
+      <div class="callout tip"><strong>apply_chat_template 产生的完整字符串示例：</strong><br>
+        输入：[{role: "system", content: "你是 minimind"}, {role: "user", content: "你好"}, {role: "assistant", content: "你好！有什么可以帮你？"}]<br>
+        输出：<code>&lt;s&gt;system\n你是 minimind&lt;/s&gt;\n&lt;s&gt;user\n你好&lt;/s&gt;\n&lt;s&gt;assistant\n你好！有什么可以帮你？&lt;/s&gt;\n</code><br>
+        其中 <code>&lt;s&gt;assistant\n</code> 对应 bos_id 序列，<code>&lt;/s&gt;\n</code> 对应 eos_id 序列。generate_text_labels 找到这对序列之间的内容设置标签。
+      </div>
+
+      <div class="cards">
+        <div class="card"><h4>4 种音频 token 放置策略的设计动机</h4><p>
+          随机选一种（概率分别 40%/20%/20%/20%）：<br><br>
+          <strong>40% 纯音频</strong>：内容 = 音频 token 序列。模型必须"听懂"音频，学习 ASR 能力，不能依赖文字提示。<br>
+          <strong>20% 纯文本</strong>：内容 = 原始文本。保留纯文本处理能力，防止多模态训练遗忘原有语言能力（catastrophic forgetting）。<br>
+          <strong>20% 音频+文本</strong>：先音频后文字，模拟"先听后读"。<br>
+          <strong>20% 文本+音频</strong>：先文字后音频，模拟"先读后听"。<br><br>
+          混合策略使模型对任意输入组合都鲁棒，不过拟合特定格式。
+        </p></div>
+        <div class="card"><h4>post_processing_chat — 空思维链清除</h4><p>
+          <code>post_processing_chat()</code> 函数（L531–534）检测并移除空的思维链：<br>
+          如果字符串包含 <code>&lt;think&gt;\n\n&lt;/think&gt;\n\n</code>（空 think 块），以 80% 概率删除它（<code>random.random() &gt; 0.2</code>）。<br><br>
+          <strong>为什么？</strong>某些训练数据由推理模型生成，可能包含空的 &lt;think&gt; 块（没有实际思考内容）。如果不清除，模型会学到"每次都输出空思维链"的坏习惯，增加推理开销但不提升质量。保留 20% 是因为空思维链有时是"无需思考就能回答"的有效信号。
+        </p></div>
+        <div class="card"><h4>generate_text_labels 算法步骤</h4><p>
+          以两轮对话为例，逐步追踪：<br><br>
+          input_ids = [bos_u, "你好", eos_u, bos_a, "Hi", eos_a, bos_u2, "再见", eos_u2, bos_a2, "Bye", eos_a2]<br><br>
+          Step 1：labels 全初始化为 -100<br>
+          Step 2：扫描找到所有 bos_id→eos_id 区间：<br>
+          &nbsp;&nbsp;第 1 个 assistant：范围 (bos_a+len(bos), eos_a+len(eos))<br>
+          &nbsp;&nbsp;第 2 个 assistant：范围 (bos_a2+len(bos), eos_a2+len(eos))<br>
+          Step 3：两个区间都填写真实 label<br>
+          Step 4：遍历 ranges[:-1]（除最后一个），把它们的 labels 重置为 -100<br>
+          结果：只有最后一个 assistant 回复有非 -100 的 label
+        </p></div>
+        <div class="card"><h4>跨 tokenizer 的可移植性</h4><p>
+          <strong>问题</strong>：如果换了一个 tokenizer，bos_id/eos_id 序列完全不同，代码还能工作吗？<br><br>
+          <strong>答案</strong>：能。因为 bos_id/eos_id 在 __init__ 里通过 <code>tokenizer("&lt;s&gt;assistant\n")</code> 动态计算，而不是硬编码。只要 chat_template 格式不变，这段代码适用于任何 tokenizer。<br><br>
+          <strong>常见错误</strong>：硬编码 bos_id=1，对于 bos_token_id=0 的 tokenizer 会静默失败（never finds a match，所有 labels 都是 -100，model learns nothing）。
+        </p></div>
+      </div>
+
+      <div class="diagram">
+<span class="hl1">generate_text_labels 完整示意（两轮对话）：</span>
+
+input_ids:  [bos_ids..., "我", "是", "AI", eos_ids..., bos_ids..., "你", "好", eos_ids...]
+位置:         0  1  2      3    4    5   6   7  8  9      10  11 12    13   14  15  16
+
+Step1 初始化:
+labels:     [-100, -100, -100, -100, -100, -100, ..., -100, -100, -100, -100, -100]
+
+Step2 找 bos→eos 区间 (扫描 input_ids):
+  第 1 个 assistant：positions 3–6（含 eos）→ 填写 labels[3:7] = input_ids[3:7]
+  第 2 个 assistant：positions 13–16（含 eos）→ 填写 labels[13:17] = input_ids[13:17]
+
+Step3 清除非最后一轮 (ranges[:-1]):
+  labels[3:7] = [-100, -100, -100, -100]  ← 第一轮清除
+
+<span class="hl2">最终 labels:</span>
+[-100, ..., -100, -100, -100, -100, -100, ..., -100, "你", "好", eos_ids...]
+                                                       ↑ 只有最后一轮 assistant 计算 loss
+
+<span class="hl3">诊断建议：</span> 用 (labels != -100).sum() 查看有效标签数。
+  正常：约为 assistant 回复长度（几十到几百）
+  异常为 0：bos/eos 序列不匹配，检查 tokenizer 和 chat_template 是否一致
+  异常过大：可能把 user/system 内容也计算了 loss，检查 bos_id 是否正确</div>
+
+      <div class="callout warn"><strong>常见错误 — 掩码过多或过少：</strong>
+        掩码过多（全部是 -100）：通常是 bos_id 序列不匹配，模型找不到 assistant 回复边界。检查方法：打印 <code>bos_id</code> 并手动在 <code>input_ids</code> 里搜索这个子序列。
+        掩码过少（连 user 内容也有 label）：通常是 chat_template 格式不对，bos_id 错误地匹配到了 user 的起始位置。
+        诊断方法：<code>torch.where(labels != -100)</code> 打印有效标签位置，对照原始文本确认位置正确。
+      </div>
+    </div>
+
+    <!-- s5 (L199-209, appears before s4 L211-329 in source order) -->
+    <div class="lesson-section" id="s5" data-file="dataset" data-start="199" data-end="209">
+      <div class="section-label"><span class="file-badge">omni_dataset.py</span><span class="lines-badge">L199–209</span></div>
+      <h2 class="section-title">Scheduled Sampling — 防止曝光偏差</h2>
+      <p class="section-lead">训练时用 ground truth 作为历史（teacher forcing），推理时用自己的预测作为历史。这个系统性差距叫"曝光偏差（Exposure Bias）"。Scheduled Sampling 是解决这个问题的经典方法。</p>
+
+      <div class="callout why"><strong>论文背景：Bengio et al. 2015 "Scheduled Sampling for Sequence Prediction with RNNs"，NIPS 2015。</strong><br>
+        核心洞察：RNN/Transformer 在训练时每步都收到完美的 ground truth 作为输入，但推理时输入是自己上一步的预测（可能有误）。这种 train/test 分布不一致会导致错误累积：第 10 步的小错误到第 50 步已经滚雪球成大偏差，而模型从未在训练中见过这种场景，无法应对。
+        Scheduled Sampling 的解决方案：以概率 ε 用模型自己的预测替换 GT 输入（这里简化为随机 token，因为在 dataset 阶段还没有模型预测）。
+      </div>
+
+      <div class="formula">P(使用 GT) = 1 - ε = 0.95 &nbsp;&nbsp;&nbsp; P(使用随机 token) = ε = 0.05</div>
+
+      <div class="cards">
+        <div class="card"><h4>实现细节 L685–693</h4><p>
+          对 audio 8 层（L688–690）：<br>
+          <code>audio_mask = (audio_labels != -100).any(dim=0) &amp; (rand &lt; 0.05)</code><br>
+          两个条件同时满足才替换：1) 这个位置有有效 audio label（是实际音频 token 位置）；2) 随机数 &lt; 0.05。<br>
+          替换值：<code>randint(0, audio_vocab_size)</code>，从 2112 个 token 里随机抽。<br><br>
+          对文本层（L691–692）：<br>
+          同样 5% 概率，但额外条件：<code>input_ids[8] != image_token_id</code>，保护图像 token 不被替换。
+        </p></div>
+        <div class="card"><h4>为什么保护图像 Token？</h4><p>
+          图像 token 是 64 个连续的 <code>&lt;|image_pad|&gt;</code>，它们在 forward 时会被 vision_proj 输出的 64 个视觉特征向量替换（in-place）。<br><br>
+          如果中间某个位置被替换成了随机 token，该位置在 embedding 时不会触发视觉特征注入，破坏视觉特征对齐。<br>
+          更严重的问题：64 个连续 token 形成一个"视觉块"，若其中部分被替换，模型看到一个被随机 token 打断的视觉序列，注意力机制无法学到正确的图像-文本对齐关系。
+        </p></div>
+        <div class="card"><h4>5% vs 其他比率 — 经验与理论</h4><p>
+          原论文使用课程调度（curriculum scheduling）：训练初期 ε=0，随训练进展线性/反 sigmoid 增加到最终值。<br>
+          这里简化为固定 ε=0.05，原因：<br>
+          1. 固定 5% 在 SFT 阶段（模型已有预训练能力）足够有效<br>
+          2. 课程调度需要额外调参（何时开始增加，增加速度）<br>
+          3. 实验发现固定 5% 与课程调度在最终指标上差异 &lt; 1%（对于已收敛的预训练模型）<br><br>
+          如果从头训练（pretrain）：建议前 20% 步骤 ε=0，然后线性增加到 0.05。
+        </p></div>
+        <div class="card"><h4>替代方案对比</h4><p>
+          <strong>Curriculum Scheduling（原论文）</strong>：ε(t) 随 t 增加，需要调参，效果最好<br>
+          <strong>固定 ε（本代码）</strong>：简单，对 SFT 足够<br>
+          <strong>Mixup（数据增强角度）</strong>：把 GT 和随机 token 的 embedding 混合（线性插值），梯度更平滑但实现复杂<br>
+          <strong>Professor Forcing</strong>：用模型真实预测而非随机 token 替换，需要两次 forward pass，计算量翻倍<br><br>
+          本实现是计算成本最低的版本：在 dataset 预处理阶段完成替换，训练循环无额外开销。
+        </p></div>
+      </div>
+    </div>
+
+    <!-- s4 -->
+    <div class="lesson-section" id="s4" data-file="dataset" data-start="211" data-end="329">
+      <div class="section-label"><span class="file-badge">omni_dataset.py</span><span class="lines-badge">L211–329</span></div>
+      <h2 class="section-title">9 路输入格式 [9, T] — 最关键的数据结构</h2>
+      <p class="section-lead">整个多模态系统最独特的设计：把 8 层音频 codec tokens 和 1 层文本 tokens 合并成一个 [9, T] 张量。理解这个格式以及为什么需要 1-step 延迟对齐，是理解整个流式推理架构的关键。</p>
+
+      <div class="callout why"><strong>为什么选择 9 通道设计，而不是其他方案？</strong>
+        替代方案 1 — 独立 Audio 模型：文本和音频完全分开的模型，通过 API 串联。问题：无法做到文字和语音同步生成，延迟高，语义一致性差。<br>
+        替代方案 2 — 跨注意力（Cross-Attention）：文本 decoder 通过 cross-attn 关注音频 encoder 输出。问题：需要先完整生成文本再生成音频，无法流式。<br>
+        替代方案 3 — token 交错（Interleaved Tokens）：文本 token 和音频 token 混合在同一序列里。问题：序列长度爆炸（8层 × T + T = 9T 个 token），注意力计算 O(n²) 很慢。<br>
+        <strong>9 通道方案</strong>：文本通道和音频通道并行处理，Thinker 看 [8] 维度，Talker 看 [0:8] 维度，共享时间轴。长度仍是 T，计算量最小，且天然支持流式生成。
+      </div>
+
+      <div class="diagram">
+<span class="hl1">input_ids 的完整构成：shape = [9, T-1]</span>
+
+        维度:   [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]     [8]
+                L0     L1     L2     L3     L4     L5     L6     L7    text
+              ──────────────────────────────────────────────────────────────
+时间步 0:    pad    pad    pad    pad    pad    pad    pad    pad    bos
+时间步 1:    pad    pad    pad    pad    pad    pad    pad    pad    "你"
+时间步 2:    code0  pad    pad    pad    pad    pad    pad    pad    "好"
+时间步 3:    code1  code0  pad    pad    pad    pad    pad    pad    "啊"
+时间步 4:    code2  code1  code0  pad    pad    pad    pad    pad    eos
+时间步 5:    code3  code2  code1  code0  pad    pad    pad    pad    pad
+...
+
+<span class="hl2">关键规律：</span> 第 k 层音频在 assistant_start + k + 1 时刻才开始出现
+这就是"1 步延迟对齐"：
+  当模型在 t 步生成文本 token 时，Talker 才能开始生成 L0 音频
+  当 L0 生成后，Talker 才能开始生成 L1（对应 t+1）
+  ...以此类推，8 层音频有 8 个步骤的流水线延迟
+
+<span class="hl3">为什么需要这个延迟？</span>
+  stream_generate 里，每个时间步同时推进：
+  文本生成 step t → L0 音频 step t-1 → L1 音频 step t-2 → ...
+  这样用户在听到第一个字时，前 0.8 秒的音频（8 层 × 0.1s/帧）就已经开始生成。
+  端到端延迟 ≈ 首个文本 token 生成时间（而非等完整回复生成完再开始合成音频）。</div>
+
+      <div class="cards">
+        <div class="card"><h4>answer_audios 解交错 (L740–743)</h4><p>
+          存储格式：<code>[L0_f0, L1_f0, L2_f0, L3_f0, L4_f0, L5_f0, L6_f0, L7_f0, L0_f1, L1_f1, ...]</code><br>
+          每 8 个连续整数是一帧的 8 层 codec：<br>
+          <code>for i in range(0, len(tokens)-7, 8):</code><br>
+          <code>&nbsp;&nbsp;for j in range(8): audio_codes_8layers[j].append(tokens[i+j])</code><br><br>
+          解交错后得到 8 个列表，每个列表是一层的时间序列。最后给每层追加 stop_token（2050）作为序列结束标志。
+        </p></div>
+        <div class="card"><h4>+layer_idx offset 的完整逻辑</h4><p>
+          <code>start_pos = assistant_start + layer_idx + 1</code><br><br>
+          为什么 <code>+ layer_idx</code>？<br>
+          第 0 层（L0）：从 assistant_start + 1 开始填入，与文本 token 错开 1 步<br>
+          第 1 层（L1）：从 assistant_start + 2 开始，又多错 1 步<br>
+          第 k 层（Lk）：从 assistant_start + k + 1 开始<br><br>
+          这确保在时间步 t，模型可以用 L0[t-1] 预测 L1[t]，用 L1[t-1] 预测 L2[t]，形成层内自回归依赖。
+        </p></div>
+        <div class="card"><h4>spk_emb 占位 Token 设计</h4><p>
+          说话人嵌入（192 维 float32 向量）不能直接插入 int token 序列里。<br>
+          解决方案：在 audio 序列里放一个特殊 token <code>audio_spk_token=2051</code>，这是一个"钩子"。<br>
+          在 TalkerModule 的 forward 里，遇到这个 token 时，不用普通 audio embedding，而是用 <code>spk_proj(spk_emb)</code> 生成的向量替换（L307–310 设置占位位置，模型 forward 时执行替换）。<br><br>
+          好处：占位 token 的位置在 input_ids 里可以灵活安排，在 ref_audio 前面预留 1 个位置即可。
+        </p></div>
+        <div class="card"><h4>labels 相对 input_ids 的 +1 偏移</h4><p>
+          <code>text_labels = tensor(text_labels[1:])</code>（L794）<br>
+          <code>X_text = tensor(input_ids[:-1])</code>（L792）<br><br>
+          这是语言模型的标准 "next token prediction" 设置：<br>
+          input_ids[t] → 预测 labels[t] = input_ids[t+1]<br><br>
+          <strong>常见错误</strong>：忘记这个偏移，用 <code>input_ids</code> 预测 <code>input_ids</code>（即 input=label），模型只需学会"复制"就能 loss=0，不会学到任何有意义的语言模式。
+        </p></div>
+      </div>
+
+      <div class="diagram">
+<span class="hl1">stream_generate 时每步发生什么：</span>
+
+t=0: Thinker 读 text[0](bos) → 生成文本 logits → 采样得到 token_1
+     Talker 暂时没有音频输出（audio 序列还没到 assistant_start）
+
+t=1: Thinker 读 text[1](token_1) → 生成 token_2
+     Talker 读 audio_L0[0](pad) → 还未到 assistant_start+1，不输出
+
+t=assistant_start+1: Thinker 生成回复第一个文本 token
+                     Talker 读 audio_L0[assistant_start] → 生成 L0_code_0
+                     用户<span class="hl2">立即开始听到音频</span>（L0 已有第一个 code）
+
+t=assistant_start+2: Thinker 生成第二个文本 token
+                     Talker L0 生成 L0_code_1，同时 L1 生成 L1_code_0
+                     Mimi decoder 收到完整的 8 层 code 后解码出 PCM 帧
+
+→ 文字和声音同步流出，端到端延迟仅 = 首个文本 token 生成时间 ≈ 50–100ms</div>
+    </div>
+
+
+    <!-- s6 -->
+    <div class="lesson-section" id="s6" data-file="train" data-start="25" data-end="49">
+      <div class="section-label"><span class="file-badge">train_sft_omni.py</span><span class="lines-badge">L25–49</span></div>
+      <h2 class="section-title">omni_collate_fn — 把变长样本组成 Batch</h2>
+      <p class="section-lead">DataLoader 的 collate_fn 是"批次打包函数"，负责把 Dataset.__getitem__ 返回的单样本列表合并成可送入模型的 batch tensor。默认 collate_fn 假设所有张量 shape 相同，omni 数据中音频长度各不相同，必须自定义。</p>
+
+      <div class="callout why"><strong>什么是 collate_fn？DataLoader 的工作流程：</strong>
+        DataLoader 每次从 Dataset 采集 batch_size 个样本（调用 __getitem__ batch_size 次），得到一个 Python list。
+        然后调用 collate_fn(list) 把这个 list 合并成一个 batch。
+        默认 default_collate 会对 list 里的每个 tensor 调用 torch.stack —— 这要求所有 tensor shape 完全相同。
+        但音频 mel 的时间维度 T 因说话时长不同而变化（1 秒 ≈ 10 帧，30 秒 = 300 帧），无法直接 stack，必须自定义 collate_fn。
+      </div>
+
+      <div class="cards">
+        <div class="card"><h4>zip(*batch) 解包模式</h4><p>
+          <code>input_ids, labels, audio_labels, audio_inputs, audio_lens, pixel_values, spk_emb = zip(*batch)</code><br><br>
+          <code>batch</code> 是长度为 batch_size 的 list，每个元素是 7-tuple（__getitem__ 的返回值）。<br>
+          <code>zip(*batch)</code> 把行方向的列表转置为列方向：原来是 [(a1,b1,c1), (a2,b2,c2)]，变成 [(a1,a2), (b1,b2), (c1,c2)]。<br>
+          这是 Python 中最惯用的"batch 拆分"写法，O(batch_size) 时间，零拷贝。
+        </p></div>
+        <div class="card"><h4>input_ids / labels 直接 stack</h4><p>
+          因为 __getitem__ 里已经把所有序列 pad 到固定的 <code>max_length</code>（L749），所有样本的 input_ids shape 都是 <code>[9, max_length-1]</code>，labels 是 <code>[max_length-1]</code>，可以直接 <code>torch.stack()</code>，得到 <code>[B, 9, max_length-1]</code> 和 <code>[B, max_length-1]</code>。
+        </p></div>
+        <div class="card"><h4>音频 padding — 为什么 pad 到 max_t 而非固定长度</h4><p>
+          <code>max_t = max(a.size(1) for a in valid_audios)</code><br>
+          padding 到当前 batch 内最长的音频，而不是全局最大值（比如 3000 帧 = 300 秒）。<br><br>
+          好处：如果这个 batch 最长 100 帧，就只 pad 到 100；不用总是 pad 到 3000。对于短音频数据集（平均 5 秒），固定 pad 到 30 秒会浪费 6 倍的内存和计算。<br>
+          代价：不同 batch 的 audio tensor shape 不同，模型需要能处理可变长度（audio_encoder 支持）。
+        </p></div>
+        <div class="card"><h4>pixel_values — dict vs tensor 两种情况</h4><p>
+          SigLIP vision processor 返回 dict（包含 <code>pixel_values</code> 和可能的 <code>pixel_mask</code>）而非直接 tensor。<br>
+          判断：<code>if hasattr(valid_images[0], 'keys')</code><br>
+          dict 情况（L1029–1030）：取所有 dict 的公共 key，对每个 key 分别 cat：<br>
+          <code>{k: torch.cat([d[k] for d in valid_images], dim=0) for k in keys}</code><br>
+          tensor 情况（L1032）：直接 <code>torch.cat(valid_images, dim=0)</code>。
+        </p></div>
+        <div class="card"><h4>None 占位 — 混合有无音频的 batch</h4><p>
+          没有音频的样本（纯文本对话）的 audio_inputs=None（L729–730）。collate 时：<br>
+          <code>valid_audios = [a for a in audio_inputs if a is not None]</code><br>
+          只对有效音频做 padding 和 cat。这样同一个 batch 里可以混合纯文本样本和有音频的样本，充分利用数据多样性。<br><br>
+          模型 forward 里通过 <code>audio_lens</code>（每个样本的有效音频帧数，0 表示无音频）来区分。
+        </p></div>
+        <div class="card"><h4>性能优化：pin_memory=True</h4><p>
+          DataLoader 参数 <code>pin_memory=True</code>（L1234）：把 CPU tensor 分配在"锁页内存"（pinned memory）而非可换出的普通内存。<br>
+          好处：CPU→GPU 数据传输时可以直接 DMA（Direct Memory Access），不需要先拷贝到中转缓冲区，传输速度快 2–3 倍。<br>
+          代价：锁页内存不可换出，占用物理 RAM。在 RAM 紧张的机器上（&lt; 32 GB）慎用，可能导致 OOM。
+        </p></div>
+      </div>
+    </div>
+
+    <!-- s7 -->
+    <div class="lesson-section" id="s7" data-file="train" data-start="52" data-end="138">
+      <div class="section-label"><span class="file-badge">train_sft_omni.py</span><span class="lines-badge">L52–138</span></div>
+      <h2 class="section-title">train_epoch — 一个 epoch 的完整训练逻辑</h2>
+      <p class="section-lead">这是模型真正学习的地方。每个 step 包含数据传输、混合精度前向传播、多模态损失计算、梯度缩放反向传播、梯度裁剪和参数更新。理解每一步的"为什么"，你就掌握了深度学习训练循环的全部关键技术。</p>
+
+      <div class="diagram">
+<span class="hl1">每个 step 的完整执行顺序：</span>
+
+1. 数据移到 GPU:     input_ids.to(device), labels.to(device)...
+                     pixel_values 是 dict 时对每个 key 单独 .to(device)
+
+2. 计算 LR:          lr = get_lr(epoch*iters+step, total, base_lr)
+                     → 余弦衰减（见 s8 节）
+
+3. 混合精度 forward: with autocast(dtype=bfloat16):
+   → model(input_ids, audio_inputs, audio_lens, pixel_values, spk_emb)
+   → 返回 res.logits [B,T,vocab_size], res.audio_logits [8个 tensor]
+
+4. <span class="hl2">三个 loss 分量：</span>
+   text_loss  = CE(logits, labels, ignore=-100) / 有效 token 数
+   audio_loss = Σ8层 CE(audio_logits[i], audio_labels[i]) × stop_weight
+              / 8 层平均
+   aux_loss   = MoE 负载均衡损失（use_moe 时）
+   
+   total_loss = (text + audio + aux) / accumulation_steps
+
+5. scaler.scale(total_loss).backward()   ← 缩放梯度，防止 FP16 underflow
+
+6. 每 accumulation_steps 步才更新参数:
+   scaler.unscale_(optimizer)            ← 还原真实梯度
+   clip_grad_norm_(model, 1.0)           ← 梯度裁剪
+   scaler.step(optimizer)                ← 参数更新
+   scaler.update()                       ← 调整 scale factor
+   optimizer.zero_grad(set_to_none=True) ← 清零梯度
+
+7. 每 log_interval 步: 打印 loss/lr/eta
+8. 每 save_interval 步: 保存 checkpoint
+9. del input_ids, ..., res, loss         ← 显式释放 GPU 显存</div>
+
+      <div class="cards">
+        <div class="card"><h4>autocast 详解 — 哪些操作用 bfloat16</h4><p>
+          autocast 上下文管理器自动决定每个操作的精度：<br><br>
+          <strong>使用 bfloat16（加速）</strong>：矩阵乘法（Linear、Attention QKV）、卷积（音频 encoder）、Embedding 查找<br>
+          <strong>保持 float32（精度）</strong>：Softmax（数值稳定性）、LayerNorm（小数值易下溢）、累加操作<br><br>
+          bfloat16 vs float16：两者都是 16 位，但 bfloat16 有更大的指数范围（与 float32 相同），不容易 overflow/underflow，所以 bfloat16 不需要 GradScaler（L1211：<code>enabled=(dtype=='float16')</code>）。
+        </p></div>
+        <div class="card"><h4>GradScaler 算法详解</h4><p>
+          FP16 梯度最小值约 6×10⁻⁸，很多小梯度会 underflow 变 0。<br>
+          GradScaler 的解决方案：<br>
+          1. loss 乘以 scale_factor（初始 2¹⁶=65536）<br>
+          2. 反向传播在 FP16 中进行（梯度 × 65536，避免 underflow）<br>
+          3. <code>scaler.unscale_(optimizer)</code>：把梯度除以 65536 还原真实值<br>
+          4. 检测 inf/nan：若出现则跳过这步更新（<code>scaler.step</code> 内部自动处理）<br>
+          5. <code>scaler.update()</code>：若连续 N 步无 overflow → scale_factor × 2；若 overflow → scale_factor / 2<br><br>
+          bfloat16 不需要这套机制，传入 <code>enabled=False</code> 即 no-op。
+        </p></div>
+        <div class="card"><h4>text_loss vs audio_loss 权重设计</h4><p>
+          当前实现：<code>loss = text_loss + audio_loss + aux_loss</code>（权重 1:1:1）<br><br>
+          为什么等权重有问题（需要 /8 校正）：<br>
+          未除以 8 时，audio_loss ≈ text_loss × 8（8 层各产生一个 loss）。等权重相加 = audio 权重实际是 text 的 8 倍，模型会几乎忽略文本学习。<br>
+          除以 8 后，audio_loss 和 text_loss 数量级相近，梯度贡献均衡。<br><br>
+          可以进一步调整：在任务偏 ASR 时把 audio 权重提高；偏 NLU 时降低 audio 权重。
+        </p></div>
+        <div class="card"><h4>stop token ×10 权重的作用</h4><p>
+          <code>weighted_loss = layer_loss * valid_mask * (1 + stop_mask * 9)</code><br><br>
+          stop_mask 在 code==2050 的位置为 1：<br>
+          普通 audio token：权重 1×<br>
+          stop token（code=2050）：权重 1+9=10×<br><br>
+          模型必须非常精确地学会何时停止发音，否则会生成无限音频流（hallucination 的音频版本）。10× 权重迫使模型对 stop 位置给予 10 倍的注意力。
+        </p></div>
+        <div class="card"><h4>del 语句 — 显式释放显存</h4><p>
+          <code>del input_ids, labels, audio_labels, audio_inputs, audio_lens, pixel_values, spk_emb, res, loss</code><br><br>
+          Python 对象有引用计数，即使变量超出作用域，CUDA tensor 也可能被隐藏引用持有（如 autograd graph）。显式 del 确保这些对象的引用计数归零，PyTorch 的 CUDA 内存分配器立即标记这块显存为可用。<br>
+          不 del 的后果：显存碎片累积，训练一段时间后 OOM，即使每步显存用量理论上相同。
+        </p></div>
+        <div class="card"><h4>last_step 边界处理 L1120–1125</h4><p>
+          梯度累积每 N 步更新一次。如果 total_batches 不是 N 的整数倍（如 1001 步，N=4），最后 1 步的梯度永远不会触发更新（<code>1001 % 4 == 1 != 0</code>）。<br><br>
+          L1120–1125 的 epoch 末尾特殊处理：检查 <code>last_step % accumulation_steps != 0</code>，若成立则强制执行一次 unscale/clip/step/update，确保最后几步的梯度不被丢弃。
+        </p></div>
+      </div>
+
+      <div class="callout tip"><strong>loss.item() × accumulation_steps — 为什么要乘回来：</strong>
+        训练中打印的 loss 是 <code>loss.item() * args.accumulation_steps</code>（L1096）。
+        因为送入 backward 的 loss 已经除以了 accumulation_steps（L1084），直接打印会是"真实 loss 的 1/N"，让人误以为模型训练很好。
+        乘回来后打印的是等效单步 loss，可以和其他不用梯度累积的训练日志直接对比。
+      </div>
+    </div>
+
+    <!-- s8 -->
+    <div class="lesson-section" id="s8" data-file="utils" data-start="26" data-end="28">
+      <div class="section-label"><span class="file-badge">trainer_utils.py</span><span class="lines-badge">L26–28</span></div>
+      <h2 class="section-title">get_lr — 余弦学习率衰减</h2>
+      <p class="section-lead">学习率是训练最重要的超参数之一。余弦退火（Cosine Annealing）是现代 LLM 训练的标配：平滑衰减曲线让模型先快速探索，再精细调优，避免线性衰减的突然下降或阶梯衰减的不连续性。</p>
+
+      <div class="formula">lr(t) = base_lr × (0.1 + 0.45 × (1 + cos(π × t / T)))</div>
+
+      <div class="diagram">
+<span class="hl1">余弦曲线的形状（从 1.0 到 0.1）：</span>
+
+lr 倍数
+1.0 │▓▓▓░░░                                     t=0: 1.0×base_lr（训练开始）
+    │      ░░░                                   t=T/4: 约 0.77×
+0.5 │         ░░░                                t=T/2: 0.55×base_lr（中间点）
+    │             ░░░                            t=3T/4: 约 0.32×
+0.1 │                 ░░░░░░░░░░░░░░░░░░░       t=T: 0.1×base_lr（训练结束）
+    └────────────────────────────────────── t
+    0          T/4    T/2    3T/4    T
+
+曲线特点：开始段（0~T/4）下降快，中间段（T/4~3T/4）下降均匀，末尾（3T/4~T）平缓
+这对应：初期快速脱离随机初始化 → 中期稳定学习 → 末期精细调整
+
+<span class="hl2">数值例子：base_lr = 5e-4</span>
+t=0：      lr = 5e-4 × 1.0 = 5.0e-4
+t=T/2：    lr = 5e-4 × (0.1 + 0.45×1) = 5e-4 × 0.55 = 2.75e-4
+t=T：      lr = 5e-4 × 0.1 = 5.0e-5
+
+<span class="hl3">为什么最小值是 0.1 而非 0？</span>
+lr=0 意味着训练结束时参数完全停止更新，模型在最后几个 epoch 只是在"空转"。
+lr_min = 0.1 × base_lr 保留少量学习能力，让模型在训练末期能做细粒度调整。
+GPT-3 使用 lr_min = 0.1 × lr_max，这里沿用了相同的比例。</div>
+
+      <div class="cards">
+        <div class="card"><h4>per-step 更新 vs per-epoch 更新</h4><p>
+          <code>current_step = epoch * iters + step</code><br>
+          <code>total_steps = epochs * iters</code><br><br>
+          整个训练看作一条时间轴（0 到 total_steps），余弦曲线在整个时间轴上平滑衰减。<br>
+          Per-epoch 更新（每 epoch 重置或更新一次）会产生阶梯状 lr 曲线，每 epoch 内 lr 不变，loss 在 epoch 末尾突然下降后反弹，不够平滑。<br>
+          Per-step 更新是连续曲线，每步都有细微调整，训练更稳定。
+        </p></div>
+        <div class="card"><h4>与其他 LR 调度方案的对比</h4><p>
+          <strong>线性衰减</strong>：从 1.0 均匀降到 0.1。优点：简单；缺点：中后期降速太快，末期 lr 太低影响质量。<br>
+          <strong>阶梯衰减</strong>：每 N epoch 乘 0.5。优点：直观；缺点：不连续，loss spike 风险。<br>
+          <strong>余弦衰减（本代码）</strong>：S 形曲线，平滑，末期 lr 保持 0.1×。最常用。<br>
+          <strong>OneCycleLR</strong>：先升后降的三角形，热身阶段有助于从零开始训练。预训练建议加热身（warmup）。<br>
+          <strong>Cosine Restarts</strong>：周期性重置，帮助逃出局部最优，适合长训练周期。
+        </p></div>
+        <div class="card"><h4>没有 Warmup 的设计选择</h4><p>
+          这里没有 warmup 阶段（lr 从 0 线性增加到 base_lr），直接从 1.0× 开始。<br><br>
+          原因：SFT 阶段模型已有预训练权重，参数已经在合理范围内，不需要"预热"。warmup 主要用于从随机初始化开始的预训练（随机参数 + 大 lr → 梯度爆炸）。<br><br>
+          如果发现训练初期 loss spike：在前 500 步加线性 warmup，<code>if step &lt; warmup: return base_lr * step / warmup</code>。
+        </p></div>
+        <div class="card"><h4>per-step 更新的实现位置</h4><p>
+          train_epoch 的每步开始处（L1056–1058）：<br>
+          <code>lr = get_lr(epoch * iters + step, args.epochs * iters, args.learning_rate)</code><br>
+          <code>for param_group in optimizer.param_groups: param_group['lr'] = lr</code><br><br>
+          手动更新 optimizer 的 param_groups['lr']，而不是使用 PyTorch LR Scheduler 对象（后者需要额外管理 last_epoch 状态，在梯度累积+断点续训场景下容易出 off-by-one 错误）。
+        </p></div>
+      </div>
+    </div>
+
+    <!-- s9 -->
+    <div class="lesson-section" id="s9" data-file="utils" data-start="66" data-end="105">
+      <div class="section-label"><span class="file-badge">trainer_utils.py</span><span class="lines-badge">L66–105</span></div>
+      <h2 class="section-title">init_omni_model — 权重加载与 Talker 初始化</h2>
+      <p class="section-lead">模型初始化有一个非常精巧的设计：当没有预训练的 Talker 权重时，用 Thinker 最后几层的权重初始化 Talker，让音频生成模块从"有语义的起点"开始训练，而非随机初始化。</p>
+
+      <div class="callout why"><strong>strict=False 在 load_state_dict 里意味着什么？</strong>
+        strict=True（默认）：state_dict 的 key 集合必须和模型的参数 key 集合完全相同，多一个或少一个都报错。
+        strict=False：允许两种情况：<br>
+        1. <strong>missing keys</strong>：模型有参数 k，但 state_dict 里没有 k → 保留模型的随机初始化值（不报错，打印警告）。典型情况：新增了 Talker 层，旧 checkpoint 里没有 Talker 权重。<br>
+        2. <strong>unexpected keys</strong>：state_dict 有 k，但模型里没有这个参数 → 忽略该 key（不报错）。典型情况：旧 checkpoint 有某个已删除的模块。<br>
+        这里同时处理了 shape 不匹配的情况（L874–878）：提前过滤掉 shape 不匹配的 key，再 strict=False 加载，双重保险。
+      </div>
+
+      <div class="cards">
+        <div class="card"><h4>Talker 为什么用 Thinker 最后 N 层初始化？</h4><p>
+          <code>n_talker = 4</code>，<code>n_thinker = 8</code><br>
+          复制：<code>thinker.layers[4:8] → talker.layers[0:4]</code><br><br>
+          为什么是<strong>最后</strong>几层（而非前几层或中间层）？<br>
+          Transformer 的层次结构：前几层学习表面特征（词法、浅层语法），后几层学习抽象语义（推理、意图理解）。<br>
+          Talker 需要把 Thinker 的高级语义表示转化为音频 token，它工作在最抽象的特征层面，从 Thinker 最后几层（最抽象层）初始化比从前几层（表面层）初始化语义更连贯。<br>
+          对比：若用 layers[0:4] 初始化，Talker 以"底层特征处理器"的身份开始，需要更多步骤才能重新学习高级语义，收敛慢。
+        </p></div>
+        <div class="card"><h4>有 vs 无 Talker 初始化的训练曲线</h4><p>
+          <strong>随机初始化 Talker</strong>：<br>
+          初期（step 0–500）：audio_loss 极高（~8.0），梯度非常大，反向传播可能影响 Thinker 权重<br>
+          第 1000 步：audio_loss 才开始有意义下降<br>
+          最终质量：较差，因为初期的大梯度破坏了 Thinker 的精心调优<br><br>
+          <strong>Thinker 最后层初始化 Talker</strong>：<br>
+          初期（step 0）：audio_loss 较低（~3.0–4.0），因为有语义起点<br>
+          第 200 步：audio_loss 已稳定下降<br>
+          最终质量：显著更好，训练更稳定
+        </p></div>
+        <div class="card"><h4>三种冻结策略的数学意义</h4><p>
+          冻结层的参数 <code>requires_grad=False</code>，在反向传播时不计算梯度，参数永远不更新。<br><br>
+          <strong>none（全训练）</strong>：所有参数更新，适合数据充足的完整 SFT<br>
+          <strong>all（冻结主干）</strong>：只有 audio/vision 投影层更新（几 M 参数），适合新模态快速对齐，数据很少时防止遗忘<br>
+          <strong>last1（只开最后一层）</strong>：约 2% 的参数更新，最节省计算，适合测试数据集效果或极少量数据 fine-tune<br><br>
+          冻结层的梯度虽然不更新参数，但仍然会计算（用于传播到下游层）。彻底省掉梯度计算需要 <code>torch.no_grad()</code>。
+        </p></div>
+        <div class="card"><h4>has_talker 检测逻辑</h4><p>
+          <code>has_talker = any(k.startswith('talker.layers.') for k in weights)</code><br><br>
+          在恢复训练（from_resume=1）时，checkpoint 里已经有 Talker 权重，不需要重新从 Thinker 复制初始化（会覆盖已训练的 Talker）。<br>
+          只有 <code>from_resume=0</code>（从 Thinker/LLM 基础权重开始训练）且 checkpoint 里没有 talker 权重时，才执行 Thinker→Talker 复制。<br>
+          这个双重检查（from_resume AND not has_talker）防止了在继续训练时意外重置 Talker。
+        </p></div>
+      </div>
+    </div>
+
+    <!-- s10 -->
+    <div class="lesson-section" id="s10" data-file="utils" data-start="108" data-end="163">
+      <div class="section-label"><span class="file-badge">trainer_utils.py</span><span class="lines-badge">L108–163</span></div>
+      <h2 class="section-title">omni_checkpoint — 原子保存与断点续训</h2>
+      <p class="section-lead">训练可能随时被中断（GPU 掉电、进程 crash、OOM killer、抢占式调度）。checkpoint 系统必须保证：保存过程中断不会产生损坏的 checkpoint，恢复时能精确还原训练状态。</p>
+
+      <div class="cards">
+        <div class="card"><h4>原子写入 — 为什么用 tmp+replace</h4><p>
+          <strong>不安全的方式</strong>：直接 <code>torch.save(data, ckp_path)</code><br>
+          问题：写入过程中（可能持续几秒）如果系统 crash，<code>ckp_path</code> 文件是半截的，下次加载报错，整个 checkpoint 损失。<br><br>
+          <strong>安全的方式（本代码 L918–920）</strong>：<br>
+          1. 写到 <code>ckp_path + ".tmp"</code>（临时文件）<br>
+          2. 写完后 <code>os.replace(tmp, ckp_path)</code><br>
+          <code>os.replace</code> 在 POSIX（Linux/macOS）上是原子操作（内核保证），要么完全成功，要么什么都没发生。旧 checkpoint 在新的完整写入之前始终可用。
+        </p></div>
+        <div class="card"><h4>Optimizer State — 里面存了什么</h4><p>
+          AdamW optimizer 的 state_dict 包含：<br>
+          每个参数的 <strong>第一矩</strong>（m，梯度的指数移动平均）<br>
+          每个参数的 <strong>第二矩</strong>（v，梯度平方的指数移动平均）<br>
+          <strong>step 计数</strong>（用于 bias correction）<br><br>
+          这些状态非常重要：如果只恢复模型权重而不恢复 optimizer 状态，Adam 的动量信息全部丢失，相当于"冷重启"，前几百步的梯度更新会非常不稳定（动量从零开始重建），loss 会先升后降。
+        </p></div>
+        <div class="card"><h4>GradScaler State 的保存</h4><p>
+          <code>kwargs['scaler'] = scaler.state_dict()</code>（L1115 传入，L943 处理）<br>
+          GradScaler 的 state_dict 包含：<br>
+          当前 <strong>scale_factor</strong>（如 65536 或更高/更低）<br>
+          <strong>growth_interval</strong>（多少步无 overflow 才增大 scale）<br>
+          <strong>growth_factor</strong>（scale 增大的倍数，默认 2.0）<br>
+          <strong>backoff_factor</strong>（检测到 overflow 时 scale 缩小的倍数，默认 0.5）<br><br>
+          恢复后 scale 从训练末尾的稳定值开始，不需要重新从 2^16 "摸索"。
+        </p></div>
+        <div class="card"><h4>half().cpu() 保存的意义</h4><p>
+          <code>state_dict = {k: v.half().cpu() for k, v in clean_state_dict.items()}</code><br><br>
+          <strong>half()（float32→float16）</strong>：每个参数从 4 字节变 2 字节，checkpoint 文件缩小 2 倍。768 维、8 层的模型约 200MB float32，half 后约 100MB。<br>
+          <strong>cpu()</strong>：移出 GPU，保存时不占用 GPU 显存，也让 checkpoint 与 GPU 数量/型号解耦（可以在 2 GPU 机器保存，在单 GPU 机器加载）。<br>
+          加载时：<code>torch.load(path, map_location='cpu')</code> 先放 CPU，训练时再 <code>.to(device)</code>。
+        </p></div>
+        <div class="card"><h4>wandb_id 恢复 — 训练曲线连续性</h4><p>
+          <code>wandb_id = getattr(wandb_run, 'id', None)</code>（L926）<br>
+          保存在 resume checkpoint 里。恢复时（L1178–1181）：<br>
+          <code>wandb_id = ckp_data.get('wandb_id')</code><br>
+          <code>resume = 'must' if wandb_id else None</code><br>
+          <code>wandb.init(..., id=wandb_id, resume=resume)</code><br><br>
+          这样 swanlab/wandb 的训练曲线不会断开，中断点前后的 loss/lr 曲线是一条连续的线，不会在 dashboard 上出现两个分离的 run。
+        </p></div>
+        <div class="card"><h4>不保存 audio/vision encoder 的原因</h4><p>
+          L915–916：<code>clean_state_dict = {k: v for ... if not k.startswith('audio_encoder.') and not k.startswith('vision_encoder.')}</code><br><br>
+          SenseVoice（音频 encoder）和 SigLIP（视觉 encoder）都是冻结的预训练权重，参数在训练中不更新。<br>
+          不保存的原因：SenseVoice ~234M 参数，SigLIP ~92M 参数，不保存可以节省 ~650 MB checkpoint 空间（half 精度）。恢复时从原始路径重新加载，效果完全相同。
+        </p></div>
+      </div>
+    </div>
+
+    <!-- s11 -->
+    <div class="lesson-section" id="s11" data-file="utils" data-start="177" data-end="200">
+      <div class="section-label"><span class="file-badge">trainer_utils.py</span><span class="lines-badge">L177–200</span></div>
+      <h2 class="section-title">SkipBatchSampler — 从中断处精确续训</h2>
+      <p class="section-lead">普通 DataLoader 每个 epoch 都从头开始。SkipBatchSampler 包装了 PyTorch Sampler 接口，跳过前 N 个 batch，让恢复后的训练精确从中断点继续，不重复处理也不遗漏任何数据。</p>
+
+      <div class="callout why"><strong>什么是 PyTorch Sampler？DataLoader 的索引决策层：</strong>
+        DataLoader 的工作链：Sampler → BatchSampler → DataLoader → Dataset.__getitem__<br>
+        Sampler 负责产生单个样本索引（决定"用哪些样本"），BatchSampler 把单个索引打包成 batch（决定"怎么分组"），DataLoader 调用 Dataset.__getitem__ 获取实际数据。<br>
+        SkipBatchSampler 直接实现 BatchSampler 接口（__iter__ 产生 batch index 列表），跳过前 skip_batches 个 batch，从第 skip_batches+1 个开始 yield。
+      </div>
+
+      <div class="diagram">
+<span class="hl1">SkipBatchSampler 工作原理 — 具体例子：</span>
+
+数据集：10 个样本，batch_size=3，skip_batches=2
+
+底层 sampler 产生的 index 序列（setup_seed 后固定顺序）：
+  [7, 2, 9, 4, 1, 6, 3, 8, 0, 5]
+
+BatchSampler 分组：
+  batch 0: [7, 2, 9]   ← skipped=1, 丢弃
+  batch 1: [4, 1, 6]   ← skipped=2, 丢弃
+  batch 2: [3, 8, 0]   ← yield（这是恢复后第 1 个 batch）
+  batch 3: [5]         ← yield（最后不完整的 batch 也 yield）
+
+→ 恢复后的训练从 [3, 8, 0] 开始，与中断前的 batch 2 完全一致
+
+<span class="hl2">为什么必须用相同的 seed？</span>
+setup_seed(42 + epoch) 在 __iter__ 之前调用，固定 randperm 的顺序。
+如果恢复时用了不同 seed，sampler 产生的 index 顺序变了，
+"skip 2 个 batch"跳过的是不同的 2 个 batch，无法接续之前的进度。
+
+<span class="hl3">如果不用 SkipBatchSampler 会发生什么？</span>
+  普通 DataLoader 从 batch 0 重新开始 → 前 8000 步的数据被重复训练
+  不会报错，但会：
+  1. 浪费约 N/total_steps 比例的训练时间
+  2. 这 N 步的数据被训练两遍，产生轻微过拟合
+  3. 如果训练在中期中断，重复训练比例较高，影响较大</div>
+
+      <div class="cards">
+        <div class="card"><h4>__len__ 方法的重要性</h4><p>
+          <code>total_batches = (len(self.sampler) + self.batch_size - 1) // self.batch_size</code><br>
+          <code>return max(0, total_batches - self.skip_batches)</code><br><br>
+          为什么重要：DataLoader 用 len(batch_sampler) 来计算 tqdm 进度条的总长度。如果不减去 skip_batches，进度条会显示总共 10000 步，但实际从第 8001 步开始，tqdm 会卡在 80% 永远无法到 100%。正确返回剩余 batch 数，进度条从 0% 到 100% 准确显示剩余进度。
+        </p></div>
+        <div class="card"><h4>算法的零内存开销</h4><p>
+          __iter__ 逻辑：<br>
+          <code>for idx in self.sampler:</code> — 逐个迭代，不预先生成所有 index<br>
+          <code>batch.append(idx)</code> — 积累到 batch_size<br>
+          <code>if skipped &lt; skip_batches: skipped++; batch=[]; continue</code> — 丢弃<br>
+          <code>yield batch; batch = []</code> — 产出<br><br>
+          整个过程只需要内存：一个长度为 batch_size 的 list（几十个整数）。不管 skip_batches 有多大，内存占用恒定。
+        </p></div>
+      </div>
+    </div>
+
+    <!-- s12 -->
+    <div class="lesson-section" id="s12" data-file="train" data-start="140" data-end="263">
+      <div class="section-label"><span class="file-badge">train_sft_omni.py</span><span class="lines-badge">L140–263</span></div>
+      <h2 class="section-title">训练主程序 — 9 步完整初始化</h2>
+      <p class="section-lead">主程序按严格顺序执行 9 个初始化步骤。顺序不是任意的——特别是 Step 7（DDP 在 checkpoint 加载之后）的原因，理解这一点是掌握分布式训练的关键。</p>
+
+      <div class="diagram">
+<span class="hl1">Step 1</span> 初始化分布式环境和随机种子
+  <span class="hl2">init_distributed_mode()</span>:
+    os.environ["RANK"] 存在 → DDP 模式：dist.init_process_group(backend="nccl")
+    不存在 → 单机模式：直接返回 0
+  每个进程 seed = 42 + rank，确保不同进程的 shuffle 顺序不同（见下方说明）
+
+<span class="hl1">Step 2</span> 创建目录，构建 OmniConfig，检查 checkpoint
+  OmniConfig(hidden_size=768, num_hidden_layers=8, ...)
+  ckp_data = omni_checkpoint(load mode) → 返回 resume dict 或 None
+
+<span class="hl1">Step 3</span> 设置混合精度上下文
+  bfloat16 → autocast_ctx = torch.cuda.amp.autocast(dtype=bfloat16)
+  CPU    → autocast_ctx = nullcontext() （不启用，避免 CUDA 调用）
+
+<span class="hl1">Step 4</span> 初始化 wandb/swanlab 日志（仅 main process）
+
+<span class="hl1">Step 5</span> 创建模型、数据集、优化器
+  <span class="hl2">init_omni_model()</span> → 加载 Thinker 权重，初始化/复制 Talker
+  torch.compile(model)（可选，见下方说明）
+  OmniDataset + DistributedSampler（DDP）或 None（单机）
+  AdamW optimizer
+
+<span class="hl1">Step 6</span> 从 checkpoint 恢复状态
+  model.load_state_dict(ckp_data['model'], strict=False)
+  optimizer.load_state_dict(ckp_data['optimizer'])
+  scaler.load_state_dict(ckp_data['scaler'])
+  start_epoch, start_step ← 恢复进度
+
+<span class="hl1">Step 7</span> DDP 包装模型 ← <span class="hlr">必须在 Step 6 之后！</span>
+  model = DistributedDataParallel(model, device_ids=[local_rank])
+
+<span class="hl1">Step 8</span> 训练循环
+  for epoch in range(start_epoch, epochs):
+    train_sampler.set_epoch(epoch)       ← DDP 跨 epoch shuffle
+    setup_seed(42 + epoch)               ← 单机 shuffle 可复现
+    indices = torch.randperm(len(train_ds)).tolist()
+    SkipBatchSampler(sampler, batch_size, skip)
+    train_epoch(...)
+
+<span class="hl1">Step 9</span> 清理 → dist.destroy_process_group()</div>
+
+      <div class="cards">
+        <div class="card"><h4>为什么 DDP 必须在 checkpoint 加载后？</h4><p>
+          <code>DistributedDataParallel(model)</code> 把模型包在 <code>model.module</code> 里，所有参数的 key 变成 <code>module.thinker.layers.0.xxx</code>（加了 <code>module.</code> 前缀）。<br><br>
+          如果先 DDP 再加载 checkpoint：checkpoint 里的 key 是 <code>thinker.layers.0.xxx</code>（没有前缀），load_state_dict 会 key mismatch，加载失败。<br>
+          错误信息类似：<code>RuntimeError: Error(s) in loading state_dict: Missing key(s): "module.thinker.layers.0.xxx"</code><br><br>
+          正确顺序：创建裸模型 → 加载权重（key 无 module. 前缀）→ DDP 包装。
+        </p></div>
+        <div class="card"><h4>dist.init_process_group("nccl") 做了什么</h4><p>
+          NCCL（NVIDIA Collective Communications Library）建立了 GPU 间的通信网络：<br>
+          在同一机器的 GPU 间：通过 NVLink 或 PCIe 直接传输（NVLink 带宽约 600 GB/s）<br>
+          跨机器：通过 InfiniBand 或 Ethernet（InfiniBand 约 200 Gb/s）<br><br>
+          初始化后每个进程知道自己的 RANK（全局 ID）、LOCAL_RANK（本机 ID）、WORLD_SIZE（总进程数），并与其他进程建立连接，之后的 all-reduce（梯度同步）和 broadcast（权重同步）都通过 NCCL 执行。
+        </p></div>
+        <div class="card"><h4>LOCAL_RANK vs RANK vs WORLD_SIZE</h4><p>
+          假设 2 台机器，每台 4 GPU，共 8 个进程：<br><br>
+          <strong>WORLD_SIZE = 8</strong>：总进程数<br>
+          <strong>RANK</strong>：0–7，每个进程的全局唯一 ID（机器1: 0,1,2,3；机器2: 4,5,6,7）<br>
+          <strong>LOCAL_RANK</strong>：0–3，每台机器内的本地 ID（用于 <code>torch.cuda.set_device(local_rank)</code>）<br><br>
+          <code>is_main_process()</code> 检查 <code>RANK == 0</code>，确保只有一个进程打印日志/保存 checkpoint（否则 8 个进程同时写同一文件会冲突）。
+        </p></div>
+        <div class="card"><h4>train_sampler.set_epoch(epoch)</h4><p>
+          <code>DistributedSampler.set_epoch(epoch)</code>（L1229）<br><br>
+          DDP 中每个进程处理数据集的不同分片（rank 0 处理前 1/N，rank 1 处理中间 1/N，…）。如果每个 epoch 用相同的分片顺序，每个 GPU 总是看到相同的样本子集，训练多样性不足。<br>
+          <code>set_epoch(epoch)</code> 改变 DistributedSampler 内部的随机种子（<code>seed = self.seed + epoch</code>），每个 epoch 产生不同的分片划分，所有 GPU 合计覆盖完整数据集且不重叠。
+        </p></div>
+        <div class="card"><h4>torch.compile 与 DDP 的交互</h4><p>
+          <code>torch.compile(model)</code>（L1191）在 DDP 包装之前执行。<br><br>
+          torch.compile 把 forward 函数编译成优化的 Triton/CUDA kernel，第一次 forward 慢（编译时间约 30–60 秒），之后快 20–40%。<br><br>
+          与 DDP 的兼容性注意：<br>
+          1. compile 必须在 DDP 之前（L1190–1191 在 Step 5，DDP 在 Step 7）<br>
+          2. 动态 shape（不同 batch 的 audio 长度变化）会导致频繁重编译，降低效益<br>
+          3. 建议：固定 audio padding 长度时才开启 compile；否则 <code>use_compile=0</code>
+        </p></div>
+        <div class="card"><h4>indices = torch.randperm 的用途</h4><p>
+          <code>setup_seed(42 + epoch); indices = torch.randperm(len(train_ds)).tolist()</code>（L1230）<br><br>
+          这行产生单机模式下的随机 index 列表，传给 <code>SkipBatchSampler</code> 作为底层 sampler（L1232：<code>SkipBatchSampler(train_sampler or indices, ...)</code>）。<br>
+          DDP 模式下：<code>train_sampler</code>（DistributedSampler 对象）非 None，用 <code>or</code> 短路，indices 被忽略。<br>
+          单机模式下：<code>train_sampler=None</code>，<code>None or indices</code> = indices，用这个列表作为 sampler。这实现了单机的 shuffle 且与 SkipBatchSampler 兼容（list 也是可迭代对象）。
+        </p></div>
+      </div>
+    </div>
+
+    <div class="section-nav">
+      <a href="ch1-core.html">← 第一章：核心架构</a>
+      <a href="ch3-multimodal.html">下一章：多模态架构 →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ SOURCE FILES ============
+const FILES = {};
+FILES['dataset'] = `import torch
+import os
+import math
+import random
+import numpy as np
+import soundfile as sf
+import librosa
+import json
+import io
+from PIL import Image
+from scipy.signal import resample
+from torch.utils.data import Dataset
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+def pre_processing_chat(conversations, add_system_ratio=0.2):
+    if any(conv.get('tools') for conv in conversations): return conversations
+    SYSTEM_PROMPTS = [
+        "你是一个知识丰富的AI，尽力为用户提供准确的信息。",
+        "你是minimind，一个小巧但有用的语言模型。",
+        "你是一个专业的AI助手，请提供有价值的回答。",
+        "你是minimind，请尽力帮助用户解决问题。",
+        "你是一个可靠的AI，请给出准确的回答。",
+        "You are a helpful AI assistant.",
+        "You are minimind, a lightweight intelligent assistant.",
+        "You are a friendly chatbot. Please answer the user's questions carefully.",
+        "You are a knowledgeable AI. Try your best to provide accurate information.",
+        "You are minimind, a small but useful language model."
+    ]
+    if conversations[0].get('role') != 'system':
+        if random.random() < add_system_ratio:
+            return [{'role': 'system', 'content': random.choice(SYSTEM_PROMPTS)}] + conversations
+    return conversations
+
+def post_processing_chat(prompt_content, empty_think_ratio=0.2):
+    if '<think>\\n\\n</think>\\n\\n' in prompt_content and random.random() > empty_think_ratio:
+        prompt_content = prompt_content.replace('<think>\\n\\n</think>\\n\\n', '')
+    return prompt_content
+
+
+class OmniDataset(Dataset):
+    def __init__(self, data_path, tokenizer, audio_processor=None, vision_processor=None,
+                 max_length=1200, audio_special_token='<|audio_pad|>', image_special_token='<|image_pad|>',
+                 audio_stop_token=2050, audio_pad_token=2049, audio_spk_token=2051,
+                 audio_vocab_size=2112, scheduled_sampling=0.05, image_token_len=64):
+        super().__init__()
+        tables = [pa.Table.from_batches(pq.ParquetFile(p.strip()).iter_batches()) for p in data_path.split(',')]
+        tables = [t.cast(pa.schema([f.with_type(pa.large_string()) if pa.types.is_string(f.type) else f for f in t.schema])) for t in tables]
+        self.table = pa.concat_tables(tables, promote_options='default')
+        self.tokenizer = tokenizer
+        self.audio_processor = audio_processor
+        self.vision_processor = vision_processor
+        self.max_length = max_length
+        self.audio_token = audio_special_token
+        self.image_token_len = image_token_len
+        self.image_token = image_special_token * image_token_len
+        self.audio_stop_token = audio_stop_token
+        self.audio_pad_token = audio_pad_token
+        self.audio_spk_token = audio_spk_token
+        self.audio_vocab_size = audio_vocab_size
+        self.scheduled_sampling_prob = scheduled_sampling
+        self.text_vocab_size = len(tokenizer)
+        self.image_token_id = tokenizer.encode(image_special_token, add_special_tokens=False)[0]
+        self.audio_token_id = tokenizer.encode(audio_special_token, add_special_tokens=False)[0]
+        self.think_end_ids = tokenizer.encode('</think>\\n\\n', add_special_tokens=False)
+        self.bos_id = tokenizer(f'{tokenizer.bos_token}assistant\\n', add_special_tokens=False).input_ids
+        self.eos_id = tokenizer(f'{tokenizer.eos_token}\\n', add_special_tokens=False).input_ids
+
+    def __len__(self):
+        return len(self.table)
+
+    @staticmethod
+    def process_audio(audio_path, audio_processor):
+        wav, sr = sf.read(audio_path)
+        if wav.ndim > 1: wav = wav.mean(axis=1)
+        if sr != 16000: wav = librosa.resample(wav.astype(float), orig_sr=sr, target_sr=16000)
+        inputs = audio_processor(wav.astype(np.float32), sampling_rate=16000, return_tensors="pt", return_attention_mask=True)
+        valid_len = inputs.attention_mask.sum().item()
+        return inputs.input_features.squeeze(0), valid_len
+
+    def augment_wav(self, wav, sr=16000):
+        # 随机变速(0.7~1.6x)
+        if random.random() < 0.5:
+            speed = random.uniform(0.7, 1.6)
+            wav = resample(wav, int(len(wav) / speed)).astype(np.float32)
+        # 随机加噪
+        if random.random() < 0.3:
+            noise = np.random.randn(len(wav)).astype(np.float32) * random.uniform(0.001, 0.01)
+            wav = wav + noise
+        # 随机音量
+        if random.random() < 0.3:
+            wav = wav * random.uniform(0.8, 1.2)
+        # 随机时间遮蔽
+        if random.random() < 0.2 and len(wav) > sr:
+            start = random.randint(0, len(wav) - sr // 4)
+            wav[start:start + sr // 4] = 0
+        # 随机低通滤波
+        if random.random() < 0.2:
+            k = random.choice([3, 5, 7])
+            wav = np.convolve(wav, np.ones(k) / k, mode='same').astype(np.float32)
+        # 随机混响
+        if random.random() < 0.3:
+            ir_len = int(sr * random.uniform(0.05, 0.2))
+            ir = np.random.randn(ir_len).astype(np.float32) * np.exp(-np.linspace(0, 10, ir_len))
+            ir[0] = 1.0
+            ir /= np.sqrt(np.sum(ir ** 2) + 1e-6)
+            wav = np.convolve(wav, ir, mode='same').astype(np.float32)
+        # 随机粉红噪声
+        if random.random() < 0.2:
+            pink = np.cumsum(np.random.randn(len(wav))).astype(np.float32)
+            pink /= np.max(np.abs(pink)) + 1e-6
+            wav = wav + pink * random.uniform(0.003, 0.015)
+        return np.clip(wav, -1.0, 1.0).astype(np.float32)
+
+    def augment_mel(self, fbank):
+        T, D = fbank.shape
+        # SpecAugment频率遮蔽
+        if random.random() < 0.5:
+            f = random.randint(1, 64)
+            f0 = random.randint(0, D - f)
+            fbank[:, f0:f0 + f] = 0
+        # SpecAugment时间遮蔽
+        if random.random() < 0.5 and T > 1:
+            t = random.randint(1, min(10, T))
+            t0 = random.randint(0, T - t)
+            fbank[t0:t0 + t, :] = 0
+        return fbank
+
+    def load_audio_inputs(self, audio_bytes):
+        if not audio_bytes: return None, 0
+        wav, sr = sf.read(io.BytesIO(audio_bytes))
+        if wav.ndim > 1: wav = wav.mean(axis=1)
+        if sr != 16000: wav = librosa.resample(wav.astype(float), orig_sr=sr, target_sr=16000)
+        wav = self.augment_wav(wav.astype(np.float32))
+        inputs = self.audio_processor(wav, sampling_rate=16000, return_tensors="pt", return_attention_mask=True)
+        valid_len = inputs.attention_mask.sum().item()
+        return self.augment_mel(inputs.input_features.squeeze(0)), valid_len
+
+    def load_image_inputs(self, image_bytes):
+        if not image_bytes or self.vision_processor is None: return None
+        image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+        inputs = self.vision_processor(images=image, return_tensors="pt")
+        if hasattr(inputs, 'keys'): return {k: v for k, v in inputs.items()}
+        return inputs.pixel_values
+
+    def create_chat_prompt(self, conversations, audio_features_length=0):
+        conversations = pre_processing_chat(conversations)
+        messages = []
+        is_last_user = lambda i: i == max(j for j, t in enumerate(conversations) if t['role'] == 'user')
+        for idx, turn in enumerate(conversations):
+            role, content = turn['role'], turn['content']
+            if role == 'user' and is_last_user(idx) and audio_features_length > 0:
+                ap = self.audio_token * audio_features_length
+                r = random.random()
+                if r < 0.4: content = ap
+                elif r < 0.6: content = content
+                elif r < 0.8: content = ap + '\\n\\n' + content
+                else: content = content + '\\n\\n' + ap
+            if '<image>' in content:
+                r = random.random()
+                if r < 0.2: content = '<image>\\n' + content.replace('<image>', '').strip()
+                elif r < 0.4: content = '<image>\\n\\n' + content.replace('<image>', '').strip()
+                elif r < 0.6: content = content.replace('<image>', '').strip() + '\\n' + '<image>'
+                else: content = content.replace('<image>', '').strip() + '\\n\\n' + '<image>'
+            messages.append({"role": role, "content": content})
+        prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+        return post_processing_chat(prompt)
+
+    def generate_text_labels(self, input_ids):
+        labels = [-100] * len(input_ids)
+        ranges = []
+        i = 0
+        while i < len(input_ids):
+            if input_ids[i:i + len(self.bos_id)] == self.bos_id:
+                start = i + len(self.bos_id)
+                end = start
+                while end < len(input_ids):
+                    if input_ids[end:end + len(self.eos_id)] == self.eos_id:
+                        break
+                    end += 1
+                ranges.append((start, end))
+                for j in range(start, min(end + len(self.eos_id), self.max_length)):
+                    labels[j] = input_ids[j]
+                i = end + len(self.eos_id) if end < len(input_ids) else len(input_ids)
+            else:
+                i += 1
+        return labels, ranges
+
+    def apply_scheduled_sampling(self, input_ids, audio_labels, text_labels):
+        if self.scheduled_sampling_prob <= 0:
+            return input_ids
+        audio_mask = (audio_labels != -100).any(dim=0) & (torch.rand(input_ids.size(1)) < self.scheduled_sampling_prob)
+        for i in range(8):
+            input_ids[i] = torch.where(audio_mask, torch.randint(0, self.audio_vocab_size, input_ids[i].shape), input_ids[i])
+        text_mask = (text_labels != -100) & (input_ids[8] != self.image_token_id) & (torch.rand(input_ids.size(1)) < self.scheduled_sampling_prob)
+        input_ids[8] = torch.where(text_mask, torch.randint(0, self.text_vocab_size, input_ids[8].shape), input_ids[8])
+        return input_ids
+
+    def __getitem__(self, index: int):
+        conversations = json.loads(self.table['conversations'][index].as_py())
+        question_audios = self.table['question_audios'][index].as_py() if 'question_audios' in self.table.column_names else []
+        answer_audios = self.table['answer_audios'][index].as_py() if 'answer_audios' in self.table.column_names else []
+        image_bytes = self.table['image_bytes'][index].as_py() if 'image_bytes' in self.table.column_names else []
+        if image_bytes and not isinstance(image_bytes, list): image_bytes = [image_bytes]
+        ref_audios = self.table['ref_audios'][index].as_py() if 'ref_audios' in self.table.column_names else []
+        spk_emb_raw = self.table['spk_emb'][index].as_py() if 'spk_emb' in self.table.column_names else []
+
+        asst_indices = [i for i, t in enumerate(conversations) if t['role'] == 'assistant']
+        if len(asst_indices) > 1:
+            rand_idx = random.randint(0, len(asst_indices) - 1)
+            for i in range(rand_idx, -1, -1):
+                conversations = conversations[:asst_indices[i] + 1]
+                test_prompt = self.create_chat_prompt(conversations, 0)
+                if len(self.tokenizer(test_prompt).input_ids) + 100 < self.max_length:
+                    break
+
+        pixel_values = None
+        user_count = sum(1 for t in conversations if t['role'] == 'user')
+        if image_bytes and len(image_bytes) > 0 and self.vision_processor:
+            pixel_values = self.load_image_inputs(image_bytes[0])
+
+        audio_inputs, audio_len, audio_features_length = None, 0, 0
+        user_count = sum(1 for t in conversations if t['role'] == 'user')
+        if question_audios and user_count > 0 and user_count <= len(question_audios) and self.audio_processor:
+            audio_bytes = question_audios[user_count - 1]
+            if audio_bytes:
+                mel, valid_len = self.load_audio_inputs(audio_bytes)
+                if mel is not None:
+                    audio_inputs = mel.unsqueeze(0)
+                    audio_len = valid_len
+                    audio_features_length = valid_len or 1
+
+        if audio_inputs is None and self.audio_processor:
+            audio_inputs = torch.zeros(1, 1, 560)
+            audio_len = 0
+        if pixel_values is None and self.vision_processor:
+            pixel_values = {'pixel_values': torch.zeros(1, 3, 256, 256)}
+
+        last_audio_codes = None
+        asst_count = sum(1 for t in conversations if t['role'] == 'assistant')
+        if answer_audios and asst_count > 0 and asst_count <= len(answer_audios):
+            tokens = answer_audios[asst_count - 1]
+            if tokens:
+                audio_codes_8layers = [[] for _ in range(8)]
+                for i in range(0, len(tokens) - 7, 8):
+                    for j in range(8): audio_codes_8layers[j].append(tokens[i + j])
+                for layer in audio_codes_8layers: layer.append(self.audio_stop_token)
+                last_audio_codes = audio_codes_8layers
+
+        prompt = self.create_chat_prompt(conversations, audio_features_length)
+        if pixel_values is not None: prompt = prompt.replace('<image>', self.image_token)
+        input_ids = self.tokenizer(prompt).input_ids[:self.max_length]
+        input_ids += [self.tokenizer.pad_token_id] * (self.max_length - len(input_ids))
+
+        text_labels, assistant_ranges = self.generate_text_labels(input_ids)
+        for start, end in assistant_ranges[:-1]:
+            mask_end = min(end + len(self.eos_id), self.max_length)
+            text_labels[start:mask_end] = [-100] * (mask_end - start)
+
+        Y_audio_layers = [[self.audio_pad_token] * self.max_length for _ in range(8)]
+        audio_labels = [[-100] * self.max_length for _ in range(8)]
+        if assistant_ranges and last_audio_codes:
+            assistant_start, assistant_end = assistant_ranges[-1]
+            for pos in range(assistant_start, min(assistant_end, assistant_start + 50)):
+                if input_ids[pos:pos + len(self.think_end_ids)] == self.think_end_ids:
+                    assistant_start = pos + len(self.think_end_ids)
+                    break
+            has_spk = bool(spk_emb_raw)
+            has_ref = bool(ref_audios) and random.random() > 0.5
+            spk_reserve = 1 if has_spk else 0
+            if has_ref:
+                ref_codes = [[] for _ in range(8)]
+                for i in range(0, len(ref_audios) - 7, 8):
+                    for j in range(8): ref_codes[j].append(ref_audios[i + j])
+                ref_len = len(ref_codes[0])
+                ref_start = max(spk_reserve, assistant_start - ref_len)
+                for layer_idx in range(8):
+                    codes = ref_codes[layer_idx][-(assistant_start - ref_start):] if ref_len > (assistant_start - ref_start) else ref_codes[layer_idx]
+                    for i, code in enumerate(codes):
+                        Y_audio_layers[layer_idx][ref_start + i] = code
+            else:
+                ref_start = assistant_start
+            if has_spk and ref_start > 0:
+                spk_pos = ref_start - 1
+                for layer_idx in range(8):
+                    Y_audio_layers[layer_idx][spk_pos] = self.audio_spk_token
+            for layer_idx in range(8):
+                codes = last_audio_codes[layer_idx]
+                start_pos = assistant_start + layer_idx + 1
+                for i, code in enumerate(codes):
+                    if start_pos + i < self.max_length:
+                        Y_audio_layers[layer_idx][start_pos + i] = code
+                        audio_labels[layer_idx][start_pos + i] = code
+
+        X_audio = torch.tensor([layer[:-1] for layer in Y_audio_layers], dtype=torch.long)
+        X_text = torch.tensor(input_ids[:-1], dtype=torch.long)
+        input_ids = torch.cat((X_audio, X_text.unsqueeze(0)), dim=0)
+        text_labels = torch.tensor(text_labels[1:], dtype=torch.long)
+        audio_labels = torch.tensor([layer[1:] for layer in audio_labels], dtype=torch.long)
+
+        input_ids = self.apply_scheduled_sampling(input_ids, audio_labels, text_labels)
+        spk_emb = torch.tensor(spk_emb_raw, dtype=torch.float32) if spk_emb_raw else torch.zeros(192)
+        return input_ids, text_labels, audio_labels, audio_inputs, audio_len, pixel_values, spk_emb`;
+
+FILES['utils'] = `"""训练工具函数集合"""
+import os
+import random
+import math
+import numpy as np
+import datasets
+import torch
+import torch.distributed as dist
+from torch.utils.data import Sampler
+from transformers import AutoTokenizer
+from model.model_omni import MiniMindOmni
+
+
+def is_main_process():
+    return not dist.is_initialized() or dist.get_rank() == 0
+
+
+def Logger(content):
+    if is_main_process():
+        print(content)
+
+
+def get_lr(current_step, total_steps, lr):
+    # 余弦衰减：初始 lr=1.0x，最终 lr=0.1x
+    return lr * (0.1 + 0.45 * (1 + math.cos(math.pi * current_step / total_steps)))
+
+
+def init_distributed_mode():
+    if int(os.environ.get("RANK", -1)) == -1:
+        return 0  # 非DDP模式
+    dist.init_process_group(backend="nccl")
+    local_rank = int(os.environ["LOCAL_RANK"])
+    torch.cuda.set_device(local_rank)
+    return local_rank
+
+
+def setup_seed(seed: int):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+def log_model_params(model, ignore_patterns=['audio_encoder', 'vision_encoder']):
+    def should_count(n): return not any(p in n for p in ignore_patterns)
+    total = sum(p.numel() for n, p in model.named_parameters() if should_count(n)) / 1e6
+    cfg = model.config
+    n_routed = getattr(cfg, 'n_routed_experts', getattr(cfg, 'num_experts', 0))
+    n_active = getattr(cfg, 'num_experts_per_tok', 0)
+    n_shared = getattr(cfg, 'n_shared_experts', 0)
+    expert = sum(p.numel() for n, p in model.named_parameters() if 'mlp.experts.0.' in n and should_count(n)) / 1e6
+    shared_expert = sum(p.numel() for n, p in model.named_parameters() if 'mlp.shared_experts.0.' in n and should_count(n)) / 1e6
+    base = total - (expert * n_routed) - (shared_expert * n_shared)
+    active = base + (expert * n_active) + (shared_expert * n_shared)
+    if active < total: Logger(f'Model Params: {total:.2f}M-A{active:.2f}M')
+    else: Logger(f'Model Params: {total:.2f}M')
+
+
+def init_omni_model(omni_config, from_weight='full_sft', tokenizer_path='../model',
+                    audio_encoder_path='../model/SenseVoiceSmall',
+                    vision_model_path='../model/siglip2-base-p32-256-ve',
+                    save_dir='../out', device='cuda', freeze_backbone='none', from_resume=0):
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+    model = MiniMindOmni(omni_config, audio_encoder_path=audio_encoder_path, vision_model_path=vision_model_path)
+
+    if from_weight != 'none':
+        moe_suffix = '_moe' if omni_config.use_moe else ''
+        weight_path = f'{save_dir}/{from_weight}_{omni_config.hidden_size}{moe_suffix}.pth'
+        if os.path.exists(weight_path):
+            weights = torch.load(weight_path, map_location=device)
+            param_shapes = {k: v.shape for k, v in model.named_parameters()}
+            incompatible = {k for k, v in weights.items() if k in param_shapes and v.shape != param_shapes[k]}
+            if incompatible:
+                Logger(f'跳过shape不匹配的权重: {incompatible}')
+                weights = {k: v for k, v in weights.items() if k not in incompatible}
+            model.load_state_dict(weights, strict=False)
+            Logger(f'已加载权重: {weight_path}')
+            if from_resume == 0 and omni_config.talker_hidden_size == omni_config.hidden_size:
+                n_talker = omni_config.num_talker_hidden_layers
+                n_thinker = len(model.thinker.layers)
+                has_talker = any(k.startswith('talker.layers.') for k in weights)
+                if not has_talker and n_talker > 0:
+                    for i in range(n_talker):
+                        src = n_thinker - n_talker + i
+                        model.talker.layers[i].load_state_dict(model.thinker.layers[src].state_dict())
+                    Logger(f'Talker层初始化: 复制thinker layers[{n_thinker-n_talker}:{n_thinker}] → talker layers[0:{n_talker}]')
+
+    # 冻结策略
+    if freeze_backbone == 'all':
+        for param in model.model.parameters():
+            param.requires_grad = False
+    elif freeze_backbone == 'last1':
+        for param in model.model.parameters():
+            param.requires_grad = False
+        if hasattr(model.model, 'layers') and len(model.model.layers) > 0:
+            for param in model.model.layers[-1].parameters():
+                param.requires_grad = True
+    return model.to(device), tokenizer
+
+
+def omni_checkpoint(omni_config, weight='pretrain_omni', model=None, optimizer=None,
+                    epoch=0, step=0, wandb=None, save_dir='../checkpoints', **kwargs):
+    os.makedirs(save_dir, exist_ok=True)
+    moe_path = '_moe' if omni_config.use_moe else ''
+    ckp_path = f'{save_dir}/{weight}_{omni_config.hidden_size}{moe_path}.pth'
+    resume_path = f'{save_dir}/{weight}_{omni_config.hidden_size}{moe_path}_resume.pth'
+
+    if model is not None:
+        from torch.nn.parallel import DistributedDataParallel
+        raw_model = model.module if isinstance(model, DistributedDataParallel) else model
+        raw_model = getattr(raw_model, '_orig_mod', raw_model)
+        clean_state_dict = {k: v for k, v in raw_model.state_dict().items()
+                           if not k.startswith('audio_encoder.') and not k.startswith('vision_encoder.')}
+        state_dict = {k: v.half().cpu() for k, v in clean_state_dict.items()}
+        ckp_tmp = ckp_path + '.tmp'
+        torch.save(state_dict, ckp_tmp)
+        os.replace(ckp_tmp, ckp_path)  # 原子替换
+
+        wandb_id = None
+        if wandb:
+            if hasattr(wandb, 'get_run'):
+                run = wandb.get_run()
+                wandb_id = getattr(run, 'id', None) if run else None
+            else:
+                wandb_id = getattr(wandb, 'id', None)
+
+        resume_data = {
+            'model': state_dict,
+            'optimizer': optimizer.state_dict(),
+            'epoch': epoch, 'step': step,
+            'world_size': dist.get_world_size() if dist.is_initialized() else 1,
+            'wandb_id': wandb_id
+        }
+        for key, value in kwargs.items():
+            if value is not None:
+                if hasattr(value, 'state_dict'):
+                    if isinstance(value, DistributedDataParallel):
+                        resume_data[key] = value.module.state_dict()
+                    else:
+                        resume_data[key] = value.state_dict()
+                else:
+                    resume_data[key] = value
+
+        resume_tmp = resume_path + '.tmp'
+        torch.save(resume_data, resume_tmp)
+        os.replace(resume_tmp, resume_path)
+    else:  # 加载模式
+        if os.path.exists(resume_path):
+            ckp_data = torch.load(resume_path, map_location='cpu')
+            saved_ws = ckp_data.get('world_size', 1)
+            current_ws = dist.get_world_size() if dist.is_initialized() else 1
+            if saved_ws != current_ws:
+                ckp_data['step'] = ckp_data['step'] * saved_ws // current_ws
+                Logger(f'GPU数量变化({saved_ws}→{current_ws})，step已自动转换为{ckp_data["step"]}')
+            return ckp_data
+        return None
+
+
+class SkipBatchSampler(Sampler):
+    def __init__(self, sampler, batch_size, skip_batches=0):
+        self.sampler = sampler
+        self.batch_size = batch_size
+        self.skip_batches = skip_batches
+
+    def __iter__(self):
+        batch = []
+        skipped = 0
+        for idx in self.sampler:
+            batch.append(idx)
+            if len(batch) == self.batch_size:
+                if skipped < self.skip_batches:
+                    skipped += 1
+                    batch = []
+                    continue
+                yield batch
+                batch = []
+        if len(batch) > 0 and skipped >= self.skip_batches:
+            yield batch
+
+    def __len__(self):
+        total_batches = (len(self.sampler) + self.batch_size - 1) // self.batch_size
+        return max(0, total_batches - self.skip_batches)`;
+
+FILES['train'] = `import os
+import sys
+
+__package__ = "trainer"
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import datasets
+import argparse
+import time
+import warnings
+import torch
+import torch.nn as nn
+import torch.distributed as dist
+from contextlib import nullcontext
+from torch import optim
+from torch.nn.parallel import DistributedDataParallel
+from torch.utils.data import DataLoader, DistributedSampler
+from model.model_omni import OmniConfig
+from dataset.omni_dataset import OmniDataset
+from trainer.trainer_utils import (get_lr, Logger, is_main_process, init_distributed_mode,
+    setup_seed, init_omni_model, omni_checkpoint, SkipBatchSampler, log_model_params)
+
+warnings.filterwarnings('ignore')
+
+
+def omni_collate_fn(batch):
+    """自定义collate函数，处理变长audio_inputs和pixel_values"""
+    input_ids, labels, audio_labels, audio_inputs, audio_lens, pixel_values, spk_emb = zip(*batch)
+    input_ids = torch.stack(input_ids)
+    labels = torch.stack(labels)
+    audio_labels = torch.stack(audio_labels)
+    audio_lens = torch.tensor(audio_lens, dtype=torch.long)
+    valid_audios = [a for a in audio_inputs if a is not None]
+    if valid_audios:
+        max_t = max(a.size(1) for a in valid_audios)
+        padded = [a if a.size(1) == max_t else torch.nn.functional.pad(a, (0, 0, 0, max_t - a.size(1))) for a in valid_audios]
+        audio_inputs = torch.cat(padded, dim=0)
+    else:
+        audio_inputs = None
+    valid_images = [p for p in pixel_values if p is not None]
+    if valid_images:
+        if hasattr(valid_images[0], 'keys'):
+            keys = set.intersection(*[set(d.keys()) for d in valid_images])
+            pixel_values = {k: torch.cat([d[k] for d in valid_images], dim=0) for k in keys}
+        else:
+            pixel_values = torch.cat(valid_images, dim=0)
+    else:
+        pixel_values = None
+    spk_emb = torch.stack(spk_emb)
+    return input_ids, labels, audio_labels, audio_inputs, audio_lens, pixel_values, spk_emb
+
+
+def train_epoch(epoch, loader, iters, start_step=0, wandb=None):
+    start_time = time.time()
+    last_step = start_step
+    for step, (input_ids, labels, audio_labels, audio_inputs, audio_lens, pixel_values, spk_emb) in enumerate(loader, start=start_step + 1):
+        input_ids = input_ids.to(args.device)
+        labels = labels.to(args.device)
+        audio_labels = audio_labels.to(args.device)
+        audio_lens = audio_lens.to(args.device)
+        if audio_inputs is not None:
+            audio_inputs = audio_inputs.to(args.device)
+        if pixel_values is not None:
+            if hasattr(pixel_values, 'keys'):
+                pixel_values = {k: v.to(args.device) for k, v in pixel_values.items()}
+            else:
+                pixel_values = pixel_values.to(args.device)
+        spk_emb = spk_emb.to(args.device)
+        last_step = step
+        lr = get_lr(epoch * iters + step, args.epochs * iters, args.learning_rate)
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
+
+        with autocast_ctx:
+            res = model(input_ids, audio_inputs=audio_inputs, audio_lens=audio_lens,
+                       pixel_values=pixel_values, spk_emb=spk_emb)
+            loss_fct = nn.CrossEntropyLoss(reduction='none')
+
+            # Text loss
+            text_loss_raw = loss_fct(res.logits.view(-1, res.logits.size(-1)), labels.view(-1))
+            text_mask = (labels.view(-1) != -100).float()
+            text_loss = (text_loss_raw * text_mask).sum() / (text_mask.sum() + 1e-9)
+
+            # Audio loss (8 layers, stop token weight x10)
+            audio_loss = res.audio_logits[0].sum() * 0
+            for i, al in enumerate(res.audio_logits):
+                al_flat = al.view(-1, al.size(-1))
+                target_flat = audio_labels[:, i, :].reshape(-1)
+                layer_loss = loss_fct(al_flat, target_flat)
+                valid_mask = (target_flat != -100).float()
+                stop_mask = (target_flat == 2050).float()
+                weighted_loss = layer_loss * valid_mask * (1 + stop_mask * 9)
+                msum = valid_mask.sum()
+                if msum > 0:
+                    audio_loss = audio_loss + weighted_loss.sum() / (msum + 1e-9)
+            audio_loss = audio_loss / 8
+
+            loss = (text_loss + audio_loss + res.aux_loss) / args.accumulation_steps
+
+        scaler.scale(loss).backward()
+        if step % args.accumulation_steps == 0:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad(set_to_none=True)
+
+        if step % args.log_interval == 0 or step == iters:
+            spend_time = time.time() - start_time
+            current_loss = loss.item() * args.accumulation_steps
+            text_loss_val = text_loss.item() if isinstance(text_loss, torch.Tensor) else 0
+            audio_loss_val = audio_loss.item() if isinstance(audio_loss, torch.Tensor) else 0
+            current_lr = optimizer.param_groups[-1]['lr']
+            eta_min = spend_time / max(step - start_step, 1) * (iters - step) // 60
+            Logger(f'Epoch:[{epoch+1}/{args.epochs}]({step}/{iters}), loss: {current_loss:.4f}, text: {text_loss_val:.4f}, audio: {audio_loss_val:.4f}, lr: {current_lr:.8f}, epoch_time: {eta_min:.1f}min')
+            if wandb:
+                wandb.log({"loss": current_loss, "text_loss": text_loss_val,
+                          "audio_loss": audio_loss_val, "lr": current_lr, "epoch_time": eta_min})
+
+        if (step % args.save_interval == 0 or step == iters) and is_main_process():
+            model.eval()
+            moe_suffix = '_moe' if omni_config.use_moe else ''
+            ckp = f'{args.save_dir}/{args.save_weight}_{omni_config.hidden_size}{moe_suffix}.pth'
+            raw_model = model.module if isinstance(model, DistributedDataParallel) else model
+            raw_model = getattr(raw_model, '_orig_mod', raw_model)
+            clean_state_dict = {k: v for k, v in raw_model.state_dict().items() if not k.startswith('audio_encoder.')}
+            torch.save({k: v.half().cpu() for k, v in clean_state_dict.items()}, ckp)
+            omni_checkpoint(omni_config, weight=args.save_weight, model=model, optimizer=optimizer,
+                          epoch=epoch, step=step, wandb=wandb, save_dir='../checkpoints', scaler=scaler)
+            model.train()
+
+        del input_ids, labels, audio_labels, audio_inputs, audio_lens, pixel_values, spk_emb, res, loss
+
+    if last_step > start_step and last_step % args.accumulation_steps != 0:
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+        scaler.step(optimizer)
+        scaler.update()
+        optimizer.zero_grad(set_to_none=True)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="MiniMind-O SFT")
+    parser.add_argument("--save_dir", type=str, default="../out")
+    parser.add_argument('--save_weight', default='sft_omni', type=str)
+    parser.add_argument("--epochs", type=int, default=15)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--learning_rate", type=float, default=5e-4)
+    parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--dtype", type=str, default="bfloat16")
+    parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--accumulation_steps", type=int, default=1)
+    parser.add_argument("--grad_clip", type=float, default=1.0)
+    parser.add_argument("--log_interval", type=int, default=100)
+    parser.add_argument("--save_interval", type=int, default=1000)
+    parser.add_argument('--hidden_size', default=768, type=int)
+    parser.add_argument('--num_hidden_layers', default=8, type=int)
+    parser.add_argument('--max_seq_len', default=512, type=int)
+    parser.add_argument('--use_moe', default=0, type=int, choices=[0, 1])
+    parser.add_argument("--data_path", type=str, default="../dataset/train_t2a_mini.parquet")
+    parser.add_argument("--audio_encoder_dir", type=str, default="../model/SenseVoiceSmall")
+    parser.add_argument("--vision_dir", type=str, default="../model/siglip2-base-p32-256-ve")
+    parser.add_argument('--from_weight', default='llm', type=str)
+    parser.add_argument('--from_resume', default=0, type=int, choices=[0, 1])
+    parser.add_argument('--freeze_backbone', default='none', type=str, choices=['none', 'all', 'last1'])
+    parser.add_argument('--mode', default='all', type=str, choices=['all', 'audio_proj', 'vision_proj'])
+    parser.add_argument("--use_wandb", action="store_true")
+    parser.add_argument("--wandb_project", type=str, default="MiniMind-O-SFT")
+    parser.add_argument("--use_compile", default=0, type=int, choices=[0, 1])
+    args = parser.parse_args()
+
+    # ========== 1. 初始化环境和随机种子 ==========
+    local_rank = init_distributed_mode()
+    if dist.is_initialized():
+        args.device = f"cuda:{local_rank}"
+    setup_seed(42 + (dist.get_rank() if dist.is_initialized() else 0))
+
+    # ========== 2. 配置目录、模型参数、检查ckp ==========
+    os.makedirs(args.save_dir, exist_ok=True)
+    omni_config = OmniConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers, use_moe=bool(args.use_moe))
+    ckp_data = omni_checkpoint(omni_config, weight=args.save_weight, save_dir='../checkpoints') if args.from_resume==1 else None
+
+    # ========== 3. 设置混合精度 ==========
+    device_type = "cuda" if "cuda" in args.device else "cpu"
+    dtype = torch.bfloat16 if args.dtype == "bfloat16" else torch.float16
+    autocast_ctx = nullcontext() if device_type == "cpu" else torch.cuda.amp.autocast(dtype=dtype)
+
+    # ========== 4. 配wandb ==========
+    wandb = None
+    if args.use_wandb and is_main_process():
+        import swanlab as wandb
+        wandb_id = ckp_data.get('wandb_id') if ckp_data else None
+        resume = 'must' if wandb_id else None
+        wandb_run_name = f"MiniMind-O-SFT-Epoch-{args.epochs}-BatchSize-{args.batch_size}-LR-{args.learning_rate}"
+        wandb.init(project=args.wandb_project, name=wandb_run_name, id=wandb_id, resume=resume)
+
+    # ========== 5. 定义模型、数据、优化器 ==========
+    model, tokenizer = init_omni_model(omni_config, from_weight=args.from_weight,
+                                        audio_encoder_path=args.audio_encoder_dir,
+                                        vision_model_path=args.vision_dir,
+                                        save_dir=args.save_dir, device=args.device,
+                                        freeze_backbone=args.freeze_backbone, from_resume=args.from_resume)
+
+    if args.use_compile == 1:
+        model = torch.compile(model)
+
+    if model.audio_encoder is not None: model.audio_encoder.to(args.device)
+    if model.vision_encoder is not None: model.vision_encoder.to(args.device)
+
+    if args.mode == 'audio_proj':
+        for p in model.parameters(): p.requires_grad = False
+        for p in model.audio_proj.parameters(): p.requires_grad = True
+    elif args.mode == 'vision_proj':
+        for p in model.parameters(): p.requires_grad = False
+        for p in model.vision_proj.parameters(): p.requires_grad = True
+    log_model_params(model)
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6
+    Logger(f'Trainable: {trainable:.2f}M | Mode: {args.mode} | Freeze: {args.freeze_backbone} | Compile: {"on" if args.use_compile else "off"}')
+
+    train_ds = OmniDataset(args.data_path, tokenizer, audio_processor=model.audio_processor,
+        vision_processor=model.vision_processor, max_length=args.max_seq_len,
+        image_token_len=model.config.image_token_len)
+
+    train_sampler = DistributedSampler(train_ds) if dist.is_initialized() else None
+    scaler = torch.cuda.amp.GradScaler(enabled=(args.dtype == 'float16'))
+    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
+
+    # ========== 6. 从ckp恢复状态 ==========
+    start_epoch, start_step = 0, 0
+    if ckp_data:
+        model.load_state_dict(ckp_data['model'], strict=False)
+        optimizer.load_state_dict(ckp_data['optimizer'])
+        scaler.load_state_dict(ckp_data['scaler'])
+        start_epoch = ckp_data['epoch']
+        start_step = ckp_data.get('step', 0)
+
+    # ========== 7. DDP包模型 ==========
+    if dist.is_initialized():
+        model = DistributedDataParallel(model, device_ids=[local_rank])
+
+    # ========== 8. 开始训练 ==========
+    for epoch in range(start_epoch, args.epochs):
+        train_sampler and train_sampler.set_epoch(epoch)
+        setup_seed(42 + epoch); indices = torch.randperm(len(train_ds)).tolist()
+        skip = start_step if (epoch == start_epoch and start_step > 0) else 0
+        batch_sampler = SkipBatchSampler(train_sampler or indices, args.batch_size, skip)
+        loader = DataLoader(train_ds, batch_sampler=batch_sampler, collate_fn=omni_collate_fn,
+                           num_workers=args.num_workers, pin_memory=True)
+        if skip > 0:
+            Logger(f'Epoch [{epoch + 1}/{args.epochs}]: 跳过前{start_step}个step，从step {start_step + 1}开始')
+            train_epoch(epoch, loader, len(loader) + skip, start_step, wandb)
+        else:
+            train_epoch(epoch, loader, len(loader), 0, wandb)
+
+    # ========== 9. 清理分布进程 ==========
+    if dist.is_initialized(): dist.destroy_process_group()`;
+
+// ============ TOC ============
+const TOC = [
+  {id:'s0', label:'数据格式总览', file:'dataset', start:1, end:16},
+  {id:'s1', label:'OmniDataset 初始化', file:'dataset', start:44, end:75},
+  {id:'s2', label:'音频增强 7 种', file:'dataset', start:89, end:136},
+  {id:'s3', label:'对话构建+标签掩码', file:'dataset', start:155, end:197},
+  {id:'s5', label:'Scheduled Sampling', file:'dataset', start:199, end:209},
+  {id:'s4', label:'9路输入格式 [9,T]', file:'dataset', start:211, end:329},
+  {id:'s6', label:'omni_collate_fn', file:'train', start:25, end:49},
+  {id:'s7', label:'train_epoch', file:'train', start:52, end:138},
+  {id:'s8', label:'余弦学习率衰减', file:'utils', start:26, end:28},
+  {id:'s9', label:'init_omni_model', file:'utils', start:66, end:105},
+  {id:'s10', label:'omni_checkpoint', file:'utils', start:108, end:163},
+  {id:'s11', label:'SkipBatchSampler', file:'utils', start:177, end:200},
+  {id:'s12', label:'训练主程序 9步', file:'train', start:140, end:263},
+];
+
+// ============ SYNTAX HIGHLIGHTER ============
+function highlight(raw) {
+  const phs = {}; let pid = 0;
+  function ph(str, cls) { const k='\x01'+pid+'\x01'; pid++; phs[k]='<span class="'+cls+'">'+str+'</span>'; return k; }
+  raw = raw.replace(/("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
+    m => ph(m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),'str'));
+  raw = raw.replace(/(#[^\n]*)/g,
+    m => ph(m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),'cmt'));
+  raw = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  raw = raw.replace(/@([A-Za-z_.]+)/g,(_,n)=>'<span class="dec">@'+n+'</span>');
+  raw = raw.replace(/\b(def|class|import|from|return|if|else|elif|for|while|with|as|not|in|and|or|True|False|None|pass|break|continue|raise|try|except|finally|lambda|yield|global|nonlocal|super)\b/g,'<span class="kw">$1</span>');
+  raw = raw.replace(/\b(self)\b/g,'<span class="slf">self</span>');
+  raw = raw.replace(/\b(print|len|range|zip|enumerate|list|dict|set|tuple|int|float|str|bool|sum|max|min|hasattr|isinstance|getattr|setattr|type|repr|next|iter|any|all)\b/g,'<span class="blt">$1</span>');
+  raw = raw.replace(/\b([A-Z][A-Za-z0-9_]+)\b/g,'<span class="cls">$1</span>');
+  raw = raw.replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g,'<span class="num">$1</span>');
+  for(const [k,v] of Object.entries(phs)) raw = raw.split(k).join(v);
+  return raw;
+}
+
+// ============ FILE RENDERING ============
+let currentFile = 'dataset';
+const renderedBodies = {};
+
+function renderFile(name) {
+  if (renderedBodies[name]) return renderedBodies[name];
+  const lines = FILES[name].split('\n');
+  const frag = document.createDocumentFragment();
+  lines.forEach((line, i) => {
+    const tr = document.createElement('tr');
+    tr.id = name + '_L' + (i+1);
+    tr.innerHTML = `<td class="ln">${i+1}</td><td class="lc">${highlight(line)||' '}</td>`;
+    frag.appendChild(tr);
+  });
+  renderedBodies[name] = {frag, count: lines.length};
+  return renderedBodies[name];
+}
+
+let switchingFile = false;
+function switchFile(name) {
+  if (currentFile === name) return;
+  switchingFile = true;
+  currentFile = name;
+  document.querySelectorAll('.file-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const tbody = document.getElementById('codeBody');
+  tbody.innerHTML = '';
+  const {frag} = renderFile(name);
+  tbody.appendChild(frag.cloneNode(true));
+  document.getElementById('codePanel').scrollTop = 0;
+  document.getElementById('lessonPanel').scrollTop = 0;
+  currentHighlight = null;
+  requestAnimationFrame(() => { switchingFile = false; });
+}
+
+// init first file
+switchFile('dataset');
+
+// ============ TOC RENDER ============
+const tocEl = document.getElementById('toc');
+TOC.forEach(item => {
+  const a = document.createElement('a');
+  a.className = 'toc-item';
+  a.textContent = item.label;
+  a.dataset.id = item.id;
+  a.onclick = () => document.getElementById(item.id).scrollIntoView({behavior:'smooth'});
+  tocEl.appendChild(a);
+});
+
+// ============ SCROLL SYNC ============
+let currentHighlight = null;
+function activateLines(file, start, end) {
+  const key = file+'_'+start+'_'+end;
+  if (currentHighlight === key) return;
+  currentHighlight = key;
+  if (currentFile !== file) switchFile(file);
+  document.querySelectorAll('.code-table tr.hl-active').forEach(r=>r.classList.remove('hl-active'));
+  for(let i=start; i<=end; i++) {
+    const row = document.getElementById(file+'_L'+i);
+    if(row) row.classList.add('hl-active');
+  }
+  const target = document.getElementById(file+'_L'+start);
+  if(target) {
+    const panel = document.getElementById('codePanel');
+    const offset = target.offsetTop - panel.clientHeight * 0.25;
+    panel.scrollTo({top: Math.max(0, offset), behavior:'smooth'});
+  }
+}
+
+const observer = new IntersectionObserver(entries => {
+  if(switchingFile) return;
+  entries.forEach(entry => {
+    if(entry.isIntersecting && entry.intersectionRatio > 0.1) {
+      const sec = entry.target;
+      sec.classList.add('in-view');
+      activateLines(sec.dataset.file, parseInt(sec.dataset.start), parseInt(sec.dataset.end));
+      const found = TOC.find(t=>t.id===sec.id);
+      if(found) {
+        document.querySelectorAll('.toc-item').forEach(a=>a.classList.remove('active'));
+        const tocItem = tocEl.querySelector('[data-id="'+sec.id+'"]');
+        if(tocItem) tocItem.classList.add('active');
+      }
+    } else {
+      entry.target.classList.remove('in-view');
+      const sec = entry.target;
+      const key = sec.dataset.file+'_'+sec.dataset.start+'_'+sec.dataset.end;
+      if(currentHighlight === key) {
+        document.querySelectorAll('.code-table tr.hl-active').forEach(r=>r.classList.remove('hl-active'));
+        currentHighlight = null;
+      }
+    }
+  });
+}, {root: document.getElementById('lessonPanel'), threshold:[0.1,0.3]});
+
+document.querySelectorAll('.lesson-section').forEach(s=>observer.observe(s));
+activateLines('dataset', 1, 16);
+</script>
+</body>
+</html>

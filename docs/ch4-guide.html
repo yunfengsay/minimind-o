@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第四章：训练你自己的 0.1B · MiniMind-O</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f6f8fa;--bg3:#eef1f4;--border:#d0d7de;
+  --text:#1f2328;--dim:#57606a;
+  --blue:#0969da;--green:#1a7f37;--yellow:#9a6700;--orange:#bc4c00;
+  --purple:#8250df;--red:#cf222e;--teal:#116329;--cyan:#0550ae;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;flex-direction:column}
+nav{height:46px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;z-index:100}
+nav a{font-size:.78rem;color:var(--dim);padding:4px 8px;border-radius:5px;transition:.15s}
+nav a:hover{background:var(--bg3);color:var(--text)}
+nav a.active{background:var(--bg3);color:var(--purple)}
+.nav-title{font-size:.82rem;font-weight:600;color:var(--text);margin-right:auto}
+.nav-sep{color:var(--border)}
+.split{display:flex;flex:1;overflow:hidden}
+
+/* REF CODE PANEL (left, static reference sheet) */
+.ref-panel{width:42%;flex-shrink:0;background:#f8f9fa;border-right:1px solid var(--border);overflow-y:scroll;overflow-x:auto;font-family:'SF Mono',Consolas,monospace;font-size:.76rem;line-height:1.7}
+.ref-header{position:sticky;top:0;background:#f8f9fa;border-bottom:1px solid var(--border);padding:8px 16px;font-size:.72rem;color:var(--dim);display:flex;justify-content:space-between;z-index:10}
+.ref-header .tag{color:var(--purple);font-weight:600}
+.ref-section{padding:16px 20px;border-bottom:1px solid rgba(208,215,222,.7)}
+.ref-section h3{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--purple);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.ref-section h3 .badge{font-size:.65rem;font-weight:400;text-transform:none;letter-spacing:0;background:var(--bg3);border:1px solid var(--border);color:var(--dim);padding:1px 7px;border-radius:8px}
+pre{white-space:pre;overflow-x:auto;font-family:'SF Mono',Consolas,monospace;font-size:.76rem;line-height:1.65;background:#f8f9fa}
+.py{color:#1f2328}.py .k{color:#cf222e}.py .s{color:#0a3069}.py .c{color:#6e7781;font-style:italic}.py .n{color:#953800}.py .cls{color:#0550ae}.py .fn{color:#6639ba}.py .key{color:#116329}
+
+/* LESSON PANEL (right) */
+.toc{width:170px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg2);overflow-y:auto;padding:16px 0}
+.toc-item{display:block;padding:5px 14px;font-size:.73rem;color:var(--dim);border-left:2px solid transparent;transition:.15s;cursor:pointer}
+.toc-item:hover{color:var(--text);background:var(--bg3)}
+.toc-item.active{color:var(--purple);border-left-color:var(--purple);background:rgba(130,80,223,.06)}
+.lesson-panel{flex:1;overflow-y:scroll}
+.lesson-section{padding:40px 44px 48px;border-bottom:1px solid var(--border)}
+.section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--purple);margin-bottom:10px}
+h2.section-title{font-size:1.45rem;font-weight:700;margin-bottom:12px;letter-spacing:-.02em}
+.section-lead{font-size:.95rem;color:var(--dim);line-height:1.7;margin-bottom:24px;max-width:700px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.card h4{font-size:.8rem;color:var(--yellow);margin-bottom:6px;font-weight:600}
+.card p,.card li{font-size:.82rem;color:var(--dim);line-height:1.65}
+.card ul{list-style:none;padding:0}
+.card ul li{padding:2px 0 2px 12px;position:relative}
+.card ul li::before{content:"·";position:absolute;left:0;color:var(--border)}
+code{font-family:monospace;background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:.83em;color:var(--orange)}
+.diagram{background:#f8f9fa;border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin:20px 0;font-family:'SF Mono',Consolas,monospace;font-size:.77rem;line-height:2;color:var(--dim);overflow-x:auto}
+.diagram .hl1{color:var(--purple)}.diagram .hl2{color:var(--blue)}.diagram .hl3{color:var(--green)}.diagram .hl4{color:var(--orange)}.diagram .hlr{color:var(--red)}
+.callout{border-radius:8px;padding:12px 16px;margin:16px 0;font-size:.85rem;line-height:1.7}
+.callout.why{background:rgba(9,105,218,.07);border-left:3px solid var(--blue)}
+.callout.why strong{color:var(--blue)}
+.callout.tip{background:rgba(26,127,55,.07);border-left:3px solid var(--green)}
+.callout.tip strong{color:var(--green)}
+.callout.warn{background:rgba(154,103,0,.07);border-left:3px solid var(--yellow)}
+.callout.warn strong{color:var(--yellow)}
+.callout.key{background:rgba(130,80,223,.07);border-left:3px solid var(--purple)}
+.callout.key strong{color:var(--purple)}
+.cost-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.82rem}
+.cost-table th{background:var(--bg3);padding:8px 12px;text-align:left;font-size:.75rem;color:var(--dim);border:1px solid var(--border)}
+.cost-table td{padding:8px 12px;border:1px solid var(--border);color:var(--dim)}
+.cost-table td:first-child{color:var(--text)}
+.cost-table tr:nth-child(even) td{background:rgba(238,241,244,.5)}
+.section-nav{display:flex;justify-content:space-between;padding:24px 44px;border-top:1px solid var(--border);background:var(--bg2)}
+.section-nav a{font-size:.85rem;color:var(--purple)}
+.step-badge{display:inline-block;background:var(--purple);color:#ffffff;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:8px}
+.flat-list{list-style:none;margin:12px 0}
+.flat-list li{padding:5px 0 5px 16px;position:relative;font-size:.88rem;color:var(--dim);line-height:1.6}
+.flat-list li::before{content:"→";position:absolute;left:0;color:var(--purple);font-size:.75rem;top:7px}
+.flat-list li strong{color:var(--text)}
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html">← 目录</a>
+  <span class="nav-sep">|</span>
+  <span class="nav-title">第四章 · 训练你自己的 0.1B 模型</span>
+  <a href="ch1-core.html">Ch1 核心</a>
+  <a href="ch2-training.html">Ch2 训练</a>
+  <a href="ch3-multimodal.html">Ch3 多模态</a>
+  <a href="ch4-guide.html" class="active">Ch4 实战指南</a>
+</nav>
+
+<div class="split">
+  <!-- LEFT: REFERENCE PANEL -->
+  <div class="ref-panel">
+    <div class="ref-header">
+      <span class="tag">参考手册</span>
+      <span>配置 · 命令 · 数据格式</span>
+    </div>
+
+    <div class="ref-section">
+      <h3>0.1B 纯文本模型配置 <span class="badge">推荐起点</span></h3>
+      <pre class="py"><span class="c"># model/model_minimind.py</span>
+<span class="cls">MiniMindConfig</span>(
+    hidden_size=<span class="n">512</span>,
+    num_hidden_layers=<span class="n">8</span>,
+    num_attention_heads=<span class="n">8</span>,
+    num_key_value_heads=<span class="n">4</span>,    <span class="c"># GQA</span>
+    head_dim=<span class="n">64</span>,
+    vocab_size=<span class="n">6400</span>,
+    max_position_embeddings=<span class="n">2048</span>,
+    rope_theta=<span class="n">1e6</span>,
+    use_moe=<span class="k">False</span>,
+    tie_word_embeddings=<span class="k">True</span>,
+)
+<span class="c"># 参数量估算：</span>
+<span class="c"># embed:  512×6400 = 3.3M（共享）</span>
+<span class="c"># 每层 Attn: 4×512×64 = 0.13M × 8层 ≈ 1M</span>
+<span class="c"># 每层 FFN:  3×512×(π/64×64) ≈ 2.5M × 8层 ≈ 20M</span>
+<span class="c"># Norm:     512 × (2×8+1) ≈ 0.009M</span>
+<span class="c"># 总计 ≈ 24M (非共享) + 3.3M embed ≈ 27M</span>
+<span class="c"># 用 hidden=768 ≈ 100M，符合 0.1B 目标</span></pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>预训练启动命令</h3>
+      <pre class="py"><span class="c"># 单 GPU 预训练</span>
+python trainer/pretrain.py \
+  --hidden_size <span class="n">768</span> \
+  --num_hidden_layers <span class="n">8</span> \
+  --batch_size <span class="n">32</span> \
+  --learning_rate <span class="n">5e-4</span> \
+  --epochs <span class="n">2</span> \
+  --max_seq_len <span class="n">512</span> \
+  --data_path ../dataset/pretrain.parquet \
+  --save_dir ../out
+
+<span class="c"># 多 GPU (4卡 DDP)</span>
+torchrun --nproc_per_node=<span class="n">4</span> trainer/pretrain.py \
+  --batch_size <span class="n">8</span> \     <span class="c"># 每卡 batch</span>
+  --accumulation_steps <span class="n">4</span>  <span class="c"># 等效 total=8×4×4=128</span></pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>SFT 启动命令</h3>
+      <pre class="py"><span class="c"># 基于预训练权重做 SFT</span>
+python trainer/train_sft_omni.py \
+  --from_weight pretrain \
+  --save_weight sft \
+  --hidden_size <span class="n">768</span> \
+  --batch_size <span class="n">16</span> \
+  --learning_rate <span class="n">2e-4</span> \
+  --epochs <span class="n">5</span> \
+  --max_seq_len <span class="n">512</span> \
+  --data_path ../dataset/sft.parquet \
+  --freeze_backbone none \
+  --from_resume <span class="n">0</span>
+
+<span class="c"># 只训练投影层（加新模态时）</span>
+  --freeze_backbone all \
+  --mode audio_proj</pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>数据 Parquet 格式</h3>
+      <pre class="py"><span class="c"># 最简单的纯文本 SFT 格式</span>
+<span class="k">import</span> pandas <span class="k">as</span> pd, json
+
+data = [
+  {
+    <span class="s">"conversations"</span>: json.dumps([
+      {<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"你好"</span>},
+      {<span class="s">"role"</span>: <span class="s">"assistant"</span>, <span class="s">"content"</span>: <span class="s">"你好！有什么可以帮你？"</span>}
+    ], ensure_ascii=<span class="k">False</span>)
+  },
+  <span class="c"># ... 更多对话</span>
+]
+df = pd.<span class="fn">DataFrame</span>(data)
+df.<span class="fn">to_parquet</span>(<span class="s">"my_sft.parquet"</span>, index=<span class="k">False</span>)
+
+<span class="c"># 多轮对话格式</span>
+conversations = [
+  {<span class="s">"role"</span>: <span class="s">"system"</span>, <span class="s">"content"</span>: <span class="s">"你是一个有用的助手"</span>},
+  {<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"第一个问题"</span>},
+  {<span class="s">"role"</span>: <span class="s">"assistant"</span>, <span class="s">"content"</span>: <span class="s">"第一个回复"</span>},
+  {<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"第二个问题"</span>},
+  {<span class="s">"role"</span>: <span class="s">"assistant"</span>, <span class="s">"content"</span>: <span class="s">"第二个回复"</span>},
+]</pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>数据量估算</h3>
+      <pre class="py"><span class="c"># 1条对话 ≈ 200-500 tokens（中文）</span>
+<span class="c"># 100万条 ≈ 3-5亿 tokens</span>
+<span class="c"># 0.1B 模型建议：</span>
+<span class="c">#   预训练：30亿+ tokens（网页文本）</span>
+<span class="c">#   SFT：10-100万条高质量对话</span>
+<span class="c">#   RLHF（可选）：1万条人工偏好对</span>
+
+<span class="c"># 1M tokens = 约 2MB 纯文本</span>
+<span class="c"># 3B tokens = 约 6GB 纯文本</span>
+<span class="c"># Parquet 压缩后约 1/3 大小</span>
+
+<span class="c"># Chinchilla 最优比例（计算最优训练）：</span>
+<span class="c"># N_tokens ≈ 20 × N_params</span>
+<span class="c"># 0.1B 模型 → 2B tokens 是计算最优</span>
+<span class="c"># 低于此量：模型欠训练（数据不足）</span>
+<span class="c"># 超过此量：可以，多训练没坏处</span></pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>训练成本估算（多 GPU 类型）</h3>
+      <pre class="py"><span class="c"># 0.1B (768 hidden, 8 layer), batch=32, seq=512</span>
+<span class="c"># GPU        价格/h   toks/s    1B tok 用时</span>
+<span class="c"># H100 SXM   $3.5     ~320K     ~0.9h   → $3.1</span>
+<span class="c"># A100 80G   $2.5     ~180K     ~1.5h   → $3.8</span>
+<span class="c"># A10G 24G   $0.75    ~70K      ~4h     → $3.0</span>
+<span class="c"># RTX 4090   $0.50    ~60K      ~4.6h   → $2.3</span>
+<span class="c"># RTX 3090   $0.35    ~40K      ~7h     → $2.5</span>
+<span class="c"># T4 16G     $0.35    ~25K      ~11h    → $3.9</span>
+<span class="c"># V100 16G   $0.55    ~45K      ~6h     → $3.3</span>
+
+<span class="c"># Lambda Labs 价格约为 AWS 的 40%</span>
+<span class="c"># Vast.ai spot 可达 Lambda 的 50%</span>
+<span class="c"># RunPod secure 约等于 Lambda</span></pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>数据源命令行下载</h3>
+      <pre class="py"><span class="c"># 英文预训练数据（HuggingFace）</span>
+huggingface-cli download \
+  datasets/openwebtext \
+  --repo-type dataset
+
+<span class="c"># 中文预训练数据</span>
+huggingface-cli download \
+  BAAI/COIG-CQIA \
+  --repo-type dataset
+
+<span class="c"># 使用 HF Hub 直接下载</span>
+<span class="k">from</span> datasets <span class="k">import</span> load_dataset
+ds = load_dataset(<span class="s">"BAAI/COIG-CQIA"</span>,
+                  split=<span class="s">"train"</span>,
+                  streaming=<span class="k">True</span>)  <span class="c"># 流式，不占内存</span></pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>快速验证训练是否正常</h3>
+      <pre class="py"><span class="c"># loss 变化应该是：</span>
+<span class="c"># step 1:   loss ≈ ln(vocab_size) = ln(6400) ≈ 8.8</span>
+<span class="c"># step 100: loss ≈ 6-7</span>
+<span class="c"># step 1000: loss ≈ 4-5</span>
+<span class="c"># step 10k: loss ≈ 2-3（预训练）</span>
+<span class="c"># step 10k: loss ≈ 1-2（SFT）</span>
+
+<span class="c"># 如果 loss 不下降，检查：</span>
+<span class="c"># 1. lr 是否太大（loss 震荡）</span>
+<span class="c"># 2. 数据 tokenize 是否正确</span>
+<span class="c"># 3. labels 的 -100 mask 是否正确</span>
+<span class="c"># 4. 梯度是否全 0（冻结了不该冻结的层）</span></pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>推理测试代码</h3>
+      <pre class="py"><span class="k">from</span> model.model_minimind <span class="k">import</span> MiniMindForCausalLM, MiniMindConfig
+<span class="k">from</span> transformers <span class="k">import</span> AutoTokenizer
+<span class="k">import</span> torch
+
+config = <span class="cls">MiniMindConfig</span>(hidden_size=<span class="n">768</span>)
+model = <span class="cls">MiniMindForCausalLM</span>(config)
+model.load_state_dict(torch.load(<span class="s">"out/sft_768.pth"</span>), strict=<span class="k">False</span>)
+model = model.<span class="fn">eval</span>().<span class="fn">to</span>(<span class="s">"cuda"</span>)
+
+tokenizer = <span class="cls">AutoTokenizer</span>.<span class="fn">from_pretrained</span>(<span class="s">"model/"</span>)
+prompt = tokenizer.<span class="fn">apply_chat_template</span>(
+  [{<span class="s">"role"</span>:<span class="s">"user"</span>, <span class="s">"content"</span>:<span class="s">"你好，你是谁？"</span>}],
+  tokenize=<span class="k">False</span>, add_generation_prompt=<span class="k">True</span>)
+ids = tokenizer(<span class="fn">prompt</span>, return_tensors=<span class="s">"pt"</span>).input_ids.<span class="fn">to</span>(<span class="s">"cuda"</span>)
+
+out = model.<span class="fn">generate</span>(ids, max_new_tokens=<span class="n">200</span>,
+  temperature=<span class="n">0.85</span>, top_p=<span class="n">0.85</span>)
+<span class="fn">print</span>(tokenizer.<span class="fn">decode</span>(out[<span class="n">0</span>], skip_special_tokens=<span class="k">True</span>))</pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>评估命令 <span class="badge">Eval Harness</span></h3>
+      <pre class="py"><span class="c"># 安装 lm-evaluation-harness</span>
+pip install lm-eval
+
+<span class="c"># 运行 MMLU（知识基准）</span>
+lm_eval --model hf \
+  --model_args pretrained=out/sft_768 \
+  --tasks mmlu \
+  --num_fewshot <span class="n">5</span> \
+  --batch_size <span class="n">8</span>
+
+<span class="c"># 运行 HellaSwag（常识推理）</span>
+lm_eval --model hf \
+  --model_args pretrained=out/sft_768 \
+  --tasks hellaswag \
+  --num_fewshot <span class="n">0</span>
+
+<span class="c"># 运行中文基准 C-Eval</span>
+lm_eval --model hf \
+  --model_args pretrained=out/sft_768 \
+  --tasks ceval-valid \
+  --num_fewshot <span class="n">5</span>
+
+<span class="c"># 自定义评估：perplexity on test set</span>
+<span class="k">import</span> torch
+<span class="k">from</span> torch.nn <span class="k">import</span> CrossEntropyLoss
+
+loss_fn = <span class="cls">CrossEntropyLoss</span>(reduction=<span class="s">"mean"</span>)
+total_loss = <span class="n">0</span>
+<span class="k">for</span> batch <span class="k">in</span> test_loader:
+    <span class="k">with</span> torch.no_grad():
+        out = model(**batch)
+    total_loss += out.loss.<span class="fn">item</span>()
+ppl = torch.<span class="fn">exp</span>(torch.tensor(total_loss / len(test_loader)))
+<span class="fn">print</span>(<span class="s">f"Test PPL: {ppl:.2f}"</span>)</pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>常见报错与修复</h3>
+      <pre class="py"><span class="c"># 错误：CUDA out of memory</span>
+<span class="c"># 修复：</span>
+<span class="c">#   减小 batch_size；增加 accumulation_steps</span>
+<span class="c">#   开 gradient_checkpointing=True</span>
+<span class="c">#   减小 max_seq_len (512→256)</span>
+<span class="c">#   用 bfloat16 替代 float32</span>
+
+<span class="c"># 错误：RuntimeError: Expected all tensors to be</span>
+<span class="c">#         on the same device</span>
+<span class="c"># 修复：检查 model.device 和 input.device</span>
+<span class="c">#   ids = ids.to(model.device)</span>
+
+<span class="c"># 错误：ValueError: Tokenizer class not found</span>
+<span class="c"># 修复：确保 tokenizer_config.json 里</span>
+<span class="c">#   "tokenizer_class" 字段存在</span>
+<span class="c">#   或 AutoTokenizer.from_pretrained(trust_remote_code=True)</span>
+
+<span class="c"># 错误：loss = nan 从第一步开始</span>
+<span class="c"># 修复：</span>
+<span class="c">#   检查 labels 是否包含有效 token（非全-100）</span>
+<span class="c">#   检查 embeddings 是否有 inf/nan 的初始化</span>
+<span class="c">#   将 lr 降低 10×</span>
+
+<span class="c"># 错误：模型权重 key 不匹配</span>
+<span class="c"># 修复：</span>
+state = torch.load(<span class="s">"out/pretrain.pth"</span>)
+<span class="c"># 过滤掉 size 不匹配的 key：</span>
+model_state = model.state_dict()
+filtered = {k:v <span class="k">for</span> k,v <span class="k">in</span> state.items()
+            <span class="k">if</span> k <span class="k">in</span> model_state <span class="k">and</span>
+            v.shape == model_state[k].shape}
+model.load_state_dict(filtered, strict=<span class="k">False</span>)</pre>
+    </div>
+
+    <div class="ref-section">
+      <h3>Tokenizer 检查工具</h3>
+      <pre class="py"><span class="k">from</span> transformers <span class="k">import</span> AutoTokenizer
+
+tok = <span class="cls">AutoTokenizer</span>.<span class="fn">from_pretrained</span>(<span class="s">"model/"</span>)
+
+<span class="c"># 1. 检查基本 tokenization</span>
+text = <span class="s">"中国的首都是北京。The capital is Beijing."</span>
+tokens = tok.<span class="fn">tokenize</span>(text)
+ids = tok.<span class="fn">encode</span>(text)
+<span class="fn">print</span>(<span class="s">f"tokens: {tokens}"</span>)
+<span class="fn">print</span>(<span class="s">f"ids: {ids}"</span>)
+<span class="fn">print</span>(<span class="s">f"decoded: {tok.decode(ids)}"</span>)
+
+<span class="c"># 2. 检查词表覆盖率（UNK 率）</span>
+<span class="k">def</span> <span class="fn">unk_rate</span>(text, tokenizer):
+    ids = tokenizer.<span class="fn">encode</span>(text, add_special_tokens=<span class="k">False</span>)
+    unk_id = tokenizer.unk_token_id
+    <span class="k">return</span> ids.<span class="fn">count</span>(unk_id) / len(ids) <span class="k">if</span> ids <span class="k">else</span> <span class="n">0</span>
+
+<span class="c"># 3. 检查 chat template</span>
+msgs = [{<span class="s">"role"</span>:<span class="s">"user"</span>,<span class="s">"content"</span>:<span class="s">"你好"</span>}]
+prompt = tok.<span class="fn">apply_chat_template</span>(msgs,
+    tokenize=<span class="k">False</span>, add_generation_prompt=<span class="k">True</span>)
+<span class="fn">print</span>(<span class="fn">repr</span>(prompt))  <span class="c"># 检查特殊 token 格式</span>
+
+<span class="c"># 4. 检查特殊 token ID</span>
+<span class="fn">print</span>(<span class="s">f"BOS: {tok.bos_token} → {tok.bos_token_id}"</span>)
+<span class="fn">print</span>(<span class="s">f"EOS: {tok.eos_token} → {tok.eos_token_id}"</span>)
+<span class="fn">print</span>(<span class="s">f"PAD: {tok.pad_token} → {tok.pad_token_id}"</span>)
+<span class="fn">print</span>(<span class="s">f"UNK: {tok.unk_token} → {tok.unk_token_id}"</span>)
+
+<span class="c"># 5. 测量 tokenization 效率（tokens/char）</span>
+<span class="k">def</span> <span class="fn">compression_ratio</span>(text, tokenizer):
+    n_tokens = len(tokenizer.<span class="fn">encode</span>(text))
+    n_chars = len(text)
+    <span class="k">return</span> n_chars / n_tokens  <span class="c"># 越高越好</span>
+
+<span class="c"># 好的中文 tokenizer：ratio ≈ 1.5-2.5 chars/token</span>
+<span class="c"># 差的（char-level）：ratio ≈ 1.0</span></pre>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc" id="toc">
+    <div style="padding:8px 14px 3px;font-size:.63rem;text-transform:uppercase;letter-spacing:.08em;color:var(--border)">目录</div>
+    <a class="toc-item active" onclick="scrollTo('s0')">0.1B 配置方案</a>
+    <a class="toc-item" onclick="scrollTo('s1')">三阶段训练路径</a>
+    <a class="toc-item" onclick="scrollTo('s2')">数据收集来源</a>
+    <a class="toc-item" onclick="scrollTo('s3')">数据质量处理</a>
+    <a class="toc-item" onclick="scrollTo('s4')">训练配置调参</a>
+    <a class="toc-item" onclick="scrollTo('s5')">常见问题诊断</a>
+    <a class="toc-item" onclick="scrollTo('s6')">可优化的地方</a>
+    <a class="toc-item" onclick="scrollTo('s7')">训练成本估算</a>
+  </div>
+
+  <!-- LESSON PANEL -->
+  <div class="lesson-panel" id="lessonPanel">
+
+    <!-- ═══════════════════════════════════════════════════ S0 ══ -->
+    <div class="lesson-section" id="s0">
+      <div class="section-label">CHAPTER 4 · 实战指南</div>
+      <h2 class="section-title">0.1B 模型配置方案</h2>
+      <p class="section-lead">0.1B（1亿参数）是学习大模型的黄金尺寸：大到足以展示智能涌现，小到可以用一张消费级 GPU 在几小时内完成训练。这里给出三种配置方案，并深入解析每个参数背后的数学原理。</p>
+
+      <table class="cost-table">
+        <tr><th>配置</th><th>hidden_size</th><th>层数</th><th>参数量</th><th>显存（fp16, bs=16）</th><th>适用场景</th></tr>
+        <tr><td>Nano</td><td>256</td><td>8</td><td>≈13M</td><td>≈2GB</td><td>快速实验，MacBook M 系列</td></tr>
+        <tr><td>Small</td><td>512</td><td>8</td><td>≈27M</td><td>≈4GB</td><td>RTX 3060/4060，快速迭代</td></tr>
+        <tr><td>Base (0.1B)</td><td>768</td><td>8</td><td>≈100M</td><td>≈8GB</td><td>RTX 3080/4080，正式训练</td></tr>
+      </table>
+
+      <div class="callout key"><strong>精确参数量计算（hidden=768）：</strong>
+        <br>Embedding 层：768 × 6400 = 4,915,200 ≈ 4.9M（如 tie_word_embeddings=True 则与输出层共享）
+        <br>每层 Attention（GQA，4个KV头，8个Q头）：
+        <br>&nbsp;&nbsp;· W_Q: 768 × (8×96) = 768² = 589,824
+        <br>&nbsp;&nbsp;· W_K, W_V: 768 × (4×96) = 294,912 各一份
+        <br>&nbsp;&nbsp;· W_O: 768² = 589,824
+        <br>&nbsp;&nbsp;· 合计：≈ 1.77M per layer
+        <br>每层 FFN（SwiGLU，intermediate ≈ 8/3 × 768 ≈ 2048）：
+        <br>&nbsp;&nbsp;· gate_proj + up_proj + down_proj: 768×2048×3 ≈ 4.7M per layer
+        <br>8 层总计：(1.77 + 4.7) × 8 ≈ 51.8M，加 Norm（≈0.02M）和 Embedding ≈ <strong>56-65M</strong>
+        <br>加上未共享的 lm_head（768×6400=4.9M）总参数接近 <strong>100M</strong>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>hidden_size 为什么必须是 2 的幂次？</h4>
+          <p>
+            GPU Tensor Core 的矩阵乘法对尺寸有强烈偏好：<br><br>
+            · FP32：矩阵维度是 8 的倍数时最优<br>
+            · FP16/BF16：维度是 16 的倍数时效率最高<br>
+            · INT8（量化推理）：需要 32 的倍数<br><br>
+            256, 512, 768, 1024 都满足 16 的倍数要求。若用 750 这样的"奇数"尺寸，A100 的矩阵乘单元会有 2.4% 的利用率损失，积累下来影响显著。<br><br>
+            768 虽然不是 2^n，但 768 = 3×256，仍是 256 的倍数，在大多数硬件上表现良好。
+          </p>
+        </div>
+        <div class="card">
+          <h4>内存占用分解（0.1B 模型，训练时）</h4>
+          <p>
+            <strong>模型权重（FP16）：</strong><br>
+            100M × 2 bytes = 200MB<br><br>
+            <strong>梯度（与权重同精度）：</strong><br>
+            100M × 2 bytes = 200MB<br><br>
+            <strong>AdamW 优化器状态：</strong><br>
+            一阶矩（momentum）× 2 + 二阶矩（adaptive LR）× 2 = 400MB<br>
+            注：Adam 状态通常用 FP32 保存<br><br>
+            <strong>Activations（batch=16, seq=512）：</strong><br>
+            约 16 × 512 × 768 × 8层 × 4 bytes ≈ 200MB<br><br>
+            <strong>总计约 1GB，加上框架开销约 2-3GB</strong>
+          </p>
+        </div>
+        <div class="card">
+          <h4>为什么 8 层是 0.1B 的甜点？</h4>
+          <p>
+            Transformer 深度 vs 宽度的研究表明：<br><br>
+            · &lt;4 层：无法学习多步推理，对话质量差<br>
+            · 6-12 层：对于 &lt;1B 参数的模型，是实验验证的"甜点区"<br>
+            · &gt;16 层（0.1B规模）：梯度回传路径过长，训练不稳定，需要 warm-up 和更谨慎的初始化<br><br>
+            GPT-2 Small（117M）选择了 12 层×768，DistilGPT-2（82M）用 6 层×768，MiniMind 的 8 层×768 是两者之间的合理选择。
+          </p>
+        </div>
+        <div class="card">
+          <h4>Chinchilla 计算最优数据量</h4>
+          <p>
+            Hoffmann et al. 2022（Chinchilla 论文）给出经验公式：<br><br>
+            <strong>最优 tokens ≈ 20 × N_params</strong><br><br>
+            · 13M Nano 模型：2.6亿 tokens（约 500MB 文本）<br>
+            · 27M Small 模型：5.4亿 tokens（约 1GB 文本）<br>
+            · 100M Base 模型：20亿 tokens（约 4GB 文本）<br><br>
+            低于此数量训练是"欠拟合"；远超此数量也有收益，但边际效用递减。许多开源小模型用 300B+ tokens 训练 0.1B 模型——这叫"overtrained but better for inference"。
+          </p>
+        </div>
+        <div class="card">
+          <h4>同类模型参数量对比</h4>
+          <p>
+            <strong>GPT-2 Small（OpenAI, 2019）</strong><br>
+            117M 参数，12层，768 hidden，12头，无 GQA<br><br>
+            <strong>DistilGPT-2（HuggingFace, 2019）</strong><br>
+            82M 参数，6层，768 hidden，知识蒸馏自 GPT-2<br><br>
+            <strong>OPT-125M（Meta, 2022）</strong><br>
+            125M 参数，12层，768 hidden，ReLU FFN<br><br>
+            <strong>MiniMind Base（本项目）</strong><br>
+            ~100M 参数，8层，768 hidden，SwiGLU + GQA + RoPE<br>
+            架构比以上三者都更现代（借鉴 LLaMA-2 设计）
+          </p>
+        </div>
+        <div class="card">
+          <h4>宽度 vs 深度的工程权衡</h4>
+          <p>
+            宽度↑（增大 hidden_size）：<br>
+            · 每层看到更多特征表示<br>
+            · 并行计算效率更高（矩阵乘法利用率高）<br>
+            · Attention 的 O(n²d) 中 d 增大，显存线性增长<br><br>
+            深度↑（增加层数）：<br>
+            · 更深的多步推理能力<br>
+            · 梯度传播路径更长，需要 skip connection<br>
+            · 推理延迟增加（层间串行）<br><br>
+            实践建议：先增宽度，再增深度。0.1B → 0.3B 时，优先把 hidden 从 768 增到 1024，而不是把层数从 8 加到 16。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ S1 ══ -->
+    <div class="lesson-section" id="s1">
+      <div class="section-label">CHAPTER 4 · 实战指南</div>
+      <h2 class="section-title">三阶段训练路径</h2>
+      <p class="section-lead">现代大模型训练分三个阶段，每个阶段的目标、数据、超参完全不同。跳过任一阶段都有具体的失败模式。理解"为什么"比记住"怎么做"更重要。</p>
+
+      <div class="diagram">
+<span class="hl1">阶段 1：预训练（Pre-training）— 学会语言</span>
+
+目标：最大化 P(x_t | x_1, ..., x_{t-1})，等价于最小化交叉熵损失
+      L = -1/T · Σ_t log P_θ(x_t | x_{<t})
+数据：大量无标签文本（不需要对话格式）
+典型数据混合：60% 网页文本 + 20% 代码 + 10% 书籍 + 10% 学术论文
+数据量：10亿-100亿 tokens（越多越好）
+学习率：5e-4 → 5e-5（余弦衰减 + warmup）
+批大小：256-1024（大 batch 梯度估计更准）
+训练时间：1-5 天（单 A100）
+<span class="hl2">评估：perplexity 下降；随机续写文本语法连贯</span>
+
+<span class="hl1">阶段 2：指令微调（SFT — Supervised Fine-tuning）— 学会对话</span>
+
+目标：让模型学会"根据 prompt 生成 completion"
+      只对 completion 部分计算 loss（prompt 部分 label=-100 mask 掉）
+数据：高质量对话 QA 对（需要标注或自动生成）
+数据量：10万-100万条对话（质量远比数量重要）
+学习率：从预训练 lr 的 1/3 开始（2e-4），防止破坏已学知识
+批大小：16-64（较小，因为数据更珍贵）
+训练时间：2-12 小时
+<span class="hl2">评估：问答准确率；指令遵循能力；MT-Bench 评分</span>
+
+<span class="hl1">阶段 3（可选）：对齐（RLHF/DPO）— 学会有用且无害</span>
+
+目标：让模型输出符合人类偏好（有帮助、无害、真实）
+DPO 损失函数：
+  L_DPO = -E[log σ(β·log(π_θ(y_w|x)/π_ref(y_w|x))
+               - β·log(π_θ(y_l|x)/π_ref(y_l|x)))]
+  y_w = chosen（好的回复），y_l = rejected（差的回复）
+  β 控制偏离参考模型的程度（通常 0.1-0.5）
+  π_ref = SFT 模型（冻结作为基准）
+数据量：1万-10万条偏好对
+训练时间：1-4 小时
+<span class="hl2">评估：WinRate（与 SFT 对比的胜率）；人工盲评</span></div>
+
+      <div class="callout warn"><strong>跳过预训练的失败模式：</strong>直接从随机初始化做 SFT，就像让一个完全不识字的人去参加辩论课。SFT 数据里的每个词对模型都是陌生的，模型无法"借力"已有的语言知识。实验表明，跳过预训练需要 50-100 倍更多 SFT 数据才能达到同等效果，而且往往仍然无法匹敌。</div>
+
+      <div class="callout warn"><strong>跳过 SFT 的失败模式：</strong>纯预训练的模型会"续写"而不是"回答"。你问"巴黎的首都是哪里？"，它可能回复"…，因此法国的文化中心一直是…"。它学会了语言规律，但不知道该在什么时候停止、如何回答具体问题。</div>
+
+      <div class="callout key"><strong>涌现能力（Emergent Abilities）出现的参数量阈值（经验值）：</strong>
+        <br>· 基本语法和词义理解：~10M 参数
+        <br>· 简单问答（Who/What/When）：~100M 参数
+        <br>· 多步推理（数学应用题）：~1B 参数开始涌现，7B+ 稳定
+        <br>· 代码生成（非平凡程序）：~1B 参数
+        <br>· 指令遵循（无需示例）：~1B 参数
+        <br>· 思维链推理（CoT）：~100B 参数时最明显
+        <br>0.1B 模型能做：流畅中文对话、简单问答、格式化输出。不要期待复杂推理。
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>预训练数据混合比例的依据</h4>
+          <p>
+            <strong>60% 网页文本</strong>：覆盖最广泛的话题和写作风格，但质量参差不齐。CommonCrawl + C4 + OpenWebText<br><br>
+            <strong>20% 代码</strong>：即使不做代码任务，代码数据也能提升逻辑推理和结构化输出能力（Google Minerva 研究证明了这点）<br><br>
+            <strong>10% 书籍</strong>：长文本、连贯叙事、高密度知识。PG-19、Books3<br><br>
+            <strong>10% 学术/百科</strong>：精确事实知识、定义性写作。arXiv、Wikipedia
+          </p>
+        </div>
+        <div class="card">
+          <h4>RLHF 方法对比：何时用哪种？</h4>
+          <p>
+            <strong>PPO（Proximal Policy Optimization）</strong><br>
+            优点：理论上最优；缺点：需要额外训练奖励模型，实现复杂，内存需求高（4个模型同时在GPU）。适合：大规模生产环境<br><br>
+            <strong>DPO（Direct Preference Optimization）</strong><br>
+            优点：无需奖励模型，实现简单，稳定。缺点：需要成对偏好数据。适合：学术研究、小规模项目<br><br>
+            <strong>ORPO（Odds Ratio Preference Optimization）</strong><br>
+            优点：无需参考模型，SFT 和对齐一步完成。适合：计算资源有限<br><br>
+            <strong>SimPO（Simple Preference Optimization）</strong><br>
+            优点：比 DPO 更简单，不需要参考模型。2024 年新方法，表现接近 PPO
+          </p>
+        </div>
+        <div class="card">
+          <h4>2 周入门计划（从零到有模型）</h4>
+          <p>
+            <span class="step-badge">第1-2天</span> 环境配置，运行官方推理脚本，理解代码结构<br>
+            <span class="step-badge">第3-4天</span> 准备 1 万条 SFT 数据（用 GPT-4 或公开数据集），理解 Parquet 格式<br>
+            <span class="step-badge">第5天</span> 用 MiniMind 预训练权重做 SFT，在本地小模型上跑通<br>
+            <span class="step-badge">第6-7天</span> 租 GPU（A100 1小时=$2.5），跑完整 SFT，观察 loss 曲线<br>
+            <span class="step-badge">第8-9天</span> 评估模型输出质量，找出缺陷，增加针对性数据<br>
+            <span class="step-badge">第10-12天</span> 迭代一次 SFT，尝试调整学习率和 epoch 数<br>
+            <span class="step-badge">第13-14天</span> 尝试 DPO：收集 500 条偏好对，做一次对齐训练
+          </p>
+        </div>
+        <div class="card">
+          <h4>DPO 损失函数详解</h4>
+          <p>
+            L_DPO 的直觉理解：<br><br>
+            · <strong>π_θ(y_w|x)/π_ref(y_w|x)</strong>：当前模型相对参考模型，对"好回复"的概率比。希望这个比值 &gt;1（当前模型更倾向于好回复）<br>
+            · <strong>π_θ(y_l|x)/π_ref(y_l|x)</strong>：当前模型对"差回复"的概率比。希望这个比值 &lt;1<br>
+            · β 是温度参数：β 越大，越强迫模型偏离参考；β 越小，越保守。通常取 0.1-0.5<br>
+            · σ 是 sigmoid 函数，把差值映射到 0-1 之间，类似二分类损失
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ S2 ══ -->
+    <div class="lesson-section" id="s2">
+      <div class="section-label">CHAPTER 4 · 实战指南</div>
+      <h2 class="section-title">数据收集来源</h2>
+      <p class="section-lead">数据是模型能力的上限。花在数据上的时间比花在调参上的时间更值得。以下从数据集质量、来源、合规性角度给出全面分析。</p>
+
+      <table class="cost-table">
+        <tr><th>数据集</th><th>大小</th><th>语言</th><th>领域</th><th>许可证</th><th>主要问题</th></tr>
+        <tr><td>BAAI/CCI3-HQ</td><td>250B tokens</td><td>中文</td><td>通用网页</td><td>CC-BY 4.0</td><td>噪声较多需过滤</td></tr>
+        <tr><td>FineWeb（HF）</td><td>15T tokens</td><td>英文</td><td>通用网页</td><td>ODC-By</td><td>仅英文</td></tr>
+        <tr><td>The Pile</td><td>825GB</td><td>英文</td><td>多领域</td><td>混合（需审查）</td><td>包含 Books3（版权争议）</td></tr>
+        <tr><td>SlimPajama</td><td>627B tokens</td><td>英文</td><td>多领域</td><td>Apache 2.0</td><td>去重后部分领域较小</td></tr>
+        <tr><td>ShareGPT90K</td><td>90K 对话</td><td>多语言</td><td>通用对话</td><td>CC-BY 4.0</td><td>内容参差不齐</td></tr>
+        <tr><td>OpenHermes 2.5</td><td>1M 条</td><td>英文</td><td>指令/代码/推理</td><td>CC-BY 4.0</td><td>GPT-4 生成，不可商用（OpenAI ToS）</td></tr>
+        <tr><td>NuminaMath</td><td>860K 题</td><td>中英</td><td>数学</td><td>CC-BY-SA 4.0</td><td>部分题目格式不一致</td></tr>
+      </table>
+
+      <div class="callout why"><strong>Common Crawl 数据处理管线：</strong>CommonCrawl 每月抓取整个互联网，输出 WARC 格式文件（Web Archive）。C4 和 FineWeb 都基于它，但做了大量过滤：(1) 只保留以标点结尾的行；(2) 丢弃 &lt;5 行或 &lt;200 字符的页面；(3) 用 fasttext 过滤非目标语言；(4) MinHash 去重；(5) 基于 "bad words" 列表过滤有害内容。C4 的全部过滤规则在 <code>tensorflow_datasets/text/c4_utils.py</code> 里，可以直接参考。</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>中文预训练数据</h4>
+          <ul>
+            <li><strong>BAAI/CCI3-HQ</strong>：中文高质量网页文本，250亿tokens，HF 直接下载</li>
+            <li><strong>pleisto/wikipedia-cn</strong>：中文维基百科（200M tokens），干净，适合冷启动</li>
+            <li><strong>fnlp/moss-002-sft-data</strong>：100万中文对话，质量较高</li>
+            <li><strong>YeungNLP/firefly-train-1.1M</strong>：115万中文多任务对话</li>
+            <li><strong>BELLE 开源数据</strong>：BelleGroup 系列，多种任务格式</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>英文预训练数据</h4>
+          <ul>
+            <li><strong>openwebtext</strong>：Reddit 高质量链接的网页文本，8B tokens</li>
+            <li><strong>The Pile</strong>：825GB 多源文本，含 GitHub/arXiv/书籍</li>
+            <li><strong>RedPajama</strong>：LLaMA 训练数据的开源复现</li>
+            <li><strong>SlimPajama</strong>：RedPajama 的去重清洗版，627B tokens</li>
+            <li><strong>FineWeb</strong>：HuggingFace 最新网页数据，非常干净</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>高质量 SFT 数据</h4>
+          <ul>
+            <li><strong>alpaca-zh</strong>：Stanford Alpaca 的中文翻译版，52K 条</li>
+            <li><strong>ShareGPT90k</strong>：真实 ChatGPT 对话（用户贡献），多轮高质量</li>
+            <li><strong>OpenHermes</strong>：综合多个数据源，90万条英文指令</li>
+            <li><strong>Open-Platypus</strong>：STEM 领域对话，极高质量</li>
+            <li><strong>WizardLM-Evol</strong>：AI 生成的复杂指令</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>自己爬取数据</h4>
+          <p>
+            用 BeautifulSoup 爬取网页时的合规原则：<br><br>
+            1. 检查 <code>robots.txt</code>（如 zhihu.com/robots.txt）<br>
+            2. 每次请求间隔 1-3 秒（rate limiting）<br>
+            3. 设置 User-Agent 标识爬虫身份<br>
+            4. 只爬公开内容，不绕过登录墙<br><br>
+            去重：用 URL 和内容的 MD5 哈希建立 set，O(1) 判重。100万 URL 的哈希表约 50MB 内存。
+          </p>
+        </div>
+        <div class="card">
+          <h4>用 LLM 生成合成数据</h4>
+          <p>
+            完整工作流：<br>
+            <span class="step-badge">1</span> 准备 20-50 条种子问题（覆盖你的领域）<br>
+            <span class="step-badge">2</span> 提示词：<em>"以下是 {n} 个关于 {domain} 的多样化问题：{seeds}。请生成 20 个类似但不重复的新问题，涵盖不同难度和角度"</em><br>
+            <span class="step-badge">3</span> 对每个问题生成详细回答（指定格式、长度、风格）<br>
+            <span class="step-badge">4</span> 质量过滤：用小模型打分，或用规则（长度/关键词/格式）自动过滤<br><br>
+            成本参考：GPT-4o 生成 1000 条对话约 $10-15；GPT-3.5-turbo 约 $1-2
+          </p>
+        </div>
+        <div class="card">
+          <h4>领域专用数据源</h4>
+          <p>
+            <strong>医疗</strong>：PubMed（3300万摘要，免费）；风险：需要领域专家审查，不可直接做医疗建议<br><br>
+            <strong>法律</strong>：CourtListener/Case Law（800万判决书）；价值极高但格式复杂<br><br>
+            <strong>科学</strong>：arXiv（200万论文，含 LaTeX 源码）；Semantic Scholar ORC<br><br>
+            <strong>金融</strong>：SEC EDGAR（上市公司年报）；注意数据时效性和前瞻性声明
+          </p>
+        </div>
+        <div class="card">
+          <h4>数据混合策略</h4>
+          <p>
+            <strong>等权混合</strong>：各数据源贡献相同数量的 tokens。缺点：数量少的高质量数据会被淹没。<br><br>
+            <strong>质量加权混合</strong>：给高质量数据更高的采样概率（如维基百科 5×权重，CommonCrawl 1×权重）<br><br>
+            <strong>温度采样混合</strong>：概率 ∝ n_i^α，α&lt;1 时平滑分布，防止大数据集垄断。LLaMA 用 α=0.7<br><br>
+            实践建议：先用等权混合验证管线，再用质量加权做最终训练
+          </p>
+        </div>
+        <div class="card">
+          <h4>数据飞轮：用模型生成下一版训练数据</h4>
+          <p>
+            v1 模型 → 在线部署 → 收集真实用户问题 → 人工标注好回答 → v2 SFT 数据 → v2 模型<br><br>
+            这是 InstructGPT 和后续所有商业模型的核心闭环。即使是 1000 条真实用户问题，其领域分布和表达方式也比合成数据更真实，往往带来质的提升。<br><br>
+            小技巧：在模型输出里加入"对以上回复满意吗？[是/否]"按钮，自动收集偏好信号用于 DPO。
+          </p>
+        </div>
+      </div>
+
+      <div class="callout warn"><strong>数据质量 &gt; 数据数量：</strong>100万条低质量数据（重复、错误、乱码）的效果往往差于 10万条高质量数据。推荐先用小数据集跑通流程，验证 loss 下降后再扩规模。特别注意：SFT 数据里的错误信息会被模型记住并重复，质量问题比量的不足更难修复。</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ S3 ══ -->
+    <div class="lesson-section" id="s3">
+      <div class="section-label">CHAPTER 4 · 实战指南</div>
+      <h2 class="section-title">数据质量处理流程</h2>
+      <p class="section-lead">原始数据直接训练效果往往很差。这里是实际项目中常用的数据清洗流程，从算法原理到实用阈值，按优先级排序。</p>
+
+      <div class="diagram">
+<span class="hl1">Step 1: MinHash LSH 去重（最重要，优先做）</span>
+
+  原理：每条文本 → 提取 n-gram (通常 5-gram) → 每个 n-gram 哈希
+        用 b 组 r 个哈希函数计算 MinHash 签名（b×r 维向量）
+        两文本 Jaccard 相似度 ≥ θ 时，LocalitySensitiveHashing 碰撞概率高
+
+  为什么不用 pairwise 相似度？
+        N 篇文档两两比较：O(N²) 复杂度
+        10M 文档 → 10^14 次比较 → 不可行
+        MinHash+LSH：O(N) 复杂度，可以处理万亿级数据集
+
+  调参建议：
+        band=20, row=5 → 签名长度100，相似度阈值 ≈ 0.7（宽松去重）
+        band=20, row=10 → 签名长度200，相似度阈值 ≈ 0.8（严格去重）
+        假阳性率（误删不重复文本）与 band/row 的关系：更多 band → 更低假阳性
+  工具：pip install datasketch text-dedup
+
+<span class="hl2">Step 2: 长度过滤</span>
+
+  丢弃 &lt;50 tokens（太短，没有完整信息）
+  丢弃 &gt;4096 tokens（超长文本往往是爬虫抓到的杂乱内容）
+  对 SFT：保证回复长度 &gt;20 tokens（太短的回复质量差）
+  对 SFT：统计回复长度分布，若 P50 &lt; 50 tokens，数据质量存疑
+
+<span class="hl3">Step 3: 语言检测（fasttext）</span>
+
+  fasttext 语言检测原理：
+        字符 n-gram（1-3 gram）作为特征 → 线性分类器
+        176 种语言，准确率约 99.5%（单语文本）
+        代码混合文本（英文+中文）准确率下降，建议阈值 &gt;0.8 才保留
+  工具：import fasttext; lid = fasttext.load_model("lid.176.ftz")
+
+<span class="hl4">Step 4: 内容过滤</span>
+
+  关键词黑名单（广告词、侮辱性词汇）
+  去除纯数字、纯符号行
+  去除低信息密度内容（重复的导航栏文本、版权声明）
+  NSFW 过滤：Perspective API 或开源 detoxify 库
+
+<span class="hl1">Step 5: 困惑度（Perplexity）质量过滤</span>
+
+  做法：用少量人工标注的"高质量文本"训练一个 KenLM 4-gram 语言模型
+        对每篇文档计算 PPL；PPL &gt; 阈值的文档质量差
+  直觉：PPL 高 = 语言模型"觉得"这段文本不自然，可能是乱码/重复/低质
+  阈值：英文通常 PPL &lt; 300；中文 PPL &lt; 200（具体取决于参考模型）
+  工具：pip install kenlm</div>
+
+      <div class="callout key"><strong>三种去重粒度：</strong>
+        <br>· <strong>文档级去重</strong>：整篇文章的 MinHash，粒度粗，最快。适合预训练语料
+        <br>· <strong>段落级去重</strong>：每段独立计算，更细粒度。适合处理部分重复的文档（如新闻转载只改了开头）
+        <br>· <strong>n-gram 级去重（suffix array）</strong>：找出所有跨文档共享的 13-gram，最细最慢。Google 用于 C4 数据集的"token-level dedup"
+        <br>建议：预训练用文档级，SFT 数据用段落级即可。
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>有害内容检测管线</h4>
+          <p>
+            三层防御：<br><br>
+            <span class="step-badge">第1层</span> 关键词黑名单（约10ms/文档）：维护一个 ~5000 词的黑名单，命中即丢弃。召回率低但精确率高<br><br>
+            <span class="step-badge">第2层</span> ML 分类器（约100ms/文档）：Perspective API（Google），或 HuggingFace 上的 toxic-bert。AUC 约 0.95，适合大规模过滤<br><br>
+            <span class="step-badge">第3层</span> 人工审核（边缘案例）：对 ML 分类器打分在 0.3-0.7 之间的文档进行人工审核。约占总数据的 2-5%
+          </p>
+        </div>
+        <div class="card">
+          <h4>Tokenizer 覆盖率检查</h4>
+          <p>
+            清洗后，在正式训练前必须做此检查：<br><br>
+            <code>unk_rate = count(UNK) / total_tokens</code><br><br>
+            · UNK 率 &gt;5%：tokenizer 覆盖不足，需要扩词表或换 tokenizer<br>
+            · UNK 率 1-5%：可接受，但建议增加相关语言的预训练语料<br>
+            · UNK 率 &lt;1%：良好<br><br>
+            另外检查：单字符 token 占比（如果很高，说明 BPE merge 不充分，压缩率差，会浪费 context window）。
+          </p>
+        </div>
+        <div class="card">
+          <h4>量化质量目标</h4>
+          <p>
+            预训练语料清洗后的健康指标：<br><br>
+            · 平均文档长度：200-2000 tokens（太短则信息密度低）<br>
+            · 词汇量（unique tokens）：&gt;80% 的词表被覆盖<br>
+            · 去重后保留率：通常 60-80%（保留率太高说明去重不彻底）<br>
+            · 语言纯净度：目标语言占比 &gt;95%<br>
+            · 困惑度中位数：参考良好中文语料，PPL 中位数约 50-150<br><br>
+            SFT 数据的健康指标：<br>
+            · 回复长度中位数：&gt;50 tokens<br>
+            · 指令多样性（distinct n-gram）：防止模板化回复
+          </p>
+        </div>
+        <div class="card">
+          <h4>实用工具链</h4>
+          <p>
+            <strong>text-dedup</strong>（pip install text-dedup）：MinHash+LSH，支持 HuggingFace datasets 格式，可直接处理 100M+ 文档<br><br>
+            <strong>fasttext</strong>：语言检测，比 langdetect 快 100×<br><br>
+            <strong>kenlm</strong>：n-gram 语言模型，困惑度过滤，C4 和 CCNet 都用它<br><br>
+            <strong>datasketch</strong>（pip install datasketch）：MinHash 算法的 Python 实现，更灵活<br><br>
+            <strong>dolma-toolkit</strong>：Allen AI 开源的完整数据处理管线，包含所有上述步骤
+          </p>
+        </div>
+      </div>
+
+      <div class="callout tip"><strong>实用小技巧：</strong>与其花大量时间清洗低质量数据，不如直接使用高质量数据源（如知乎高赞回答、维基百科、教科书、技术文档）。这些来源的噪声天然很低。把 80% 的精力用于数据获取，20% 用于清洗，往往比反过来效果更好。</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ S4 ══ -->
+    <div class="lesson-section" id="s4">
+      <div class="section-label">CHAPTER 4 · 实战指南</div>
+      <h2 class="section-title">训练配置调参</h2>
+      <p class="section-lead">超参数选择是训练中最需要经验的部分。这里从理论推导到实用规则，覆盖每个关键超参。</p>
+
+      <div class="callout why"><strong>线性缩放规则的推导：</strong>
+        batch_size 增大 k 倍时，每步梯度估计的方差变为 1/k（中心极限定理）。为保持相同的"噪声水平"，可以把学习率增大 k 倍（线性缩放），或增大 √k 倍（更保守的平方根规则）。实践中，batch 从 32 增大到 256（8×），通常学习率乘 2-4× 而不是 8×，因为过大的 LR 会导致不稳定。Facebook 在 ResNet 论文里验证了这个规则在 batch≤8192 时有效。
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>学习率 — 理论与实践</h4>
+          <p>
+            <strong>预训练</strong>：5e-4（大规模 batch 时可以用更大的 lr）<br>
+            <strong>SFT</strong>：1e-4 到 5e-4（从预训练 lr 的 1/3 开始）<br>
+            <strong>RLHF/DPO</strong>：5e-5 到 1e-4（更小，避免破坏 SFT 学到的对话能力）<br><br>
+            <strong>LR Finder 技术：</strong><br>
+            从 lr=1e-7 开始，每步乘以 1.1，记录每步 loss。在 loss 开始反弹前的 lr 即为最大可用 lr，取其 1/10 作为初始 lr。这是 fast.ai 推广的技术，5-10 分钟找到最优 lr。
+          </p>
+        </div>
+        <div class="card">
+          <h4>Adam 优化器内部机制</h4>
+          <p>
+            <code>m_t = β1·m_{t-1} + (1-β1)·g_t</code>  ← 一阶矩（动量）<br>
+            <code>v_t = β2·v_{t-1} + (1-β2)·g_t²</code>  ← 二阶矩（自适应LR）<br>
+            <code>θ = θ - α·m_t/√(v_t+ε)</code><br><br>
+            · β1=0.9（默认），β2=0.95（比0.999更快跟踪梯度变化）<br>
+            · Weight decay 不应用于 bias 和 LayerNorm 参数（这些参数不需要正则化）<br>
+            · ε=1e-8 防止除零，bfloat16 下建议用 1e-5 避免精度问题
+          </p>
+        </div>
+        <div class="card">
+          <h4>FP16 vs BF16 选择</h4>
+          <p>
+            <strong>FP16</strong>（IEEE half-precision）：<br>
+            · 指数位：5位，范围 ±65504<br>
+            · 尾数位：10位<br>
+            · 溢出风险高（Attention logits 可能超过65504）<br>
+            · 需要 GradScaler 动态缩放防止溢出<br>
+            · 优点：V100 等老 GPU 原生支持，更广泛的硬件兼容性<br><br>
+            <strong>BF16</strong>（Brain Float 16）：<br>
+            · 指数位：8位（与FP32相同），范围极大<br>
+            · 尾数位：7位（精度略低于FP16）<br>
+            · 无溢出风险，训练更稳定<br>
+            · A100/H100 首选，RTX 30/40 系列支持
+          </p>
+        </div>
+        <div class="card">
+          <h4>batch size 与显存</h4>
+          <p>
+            越大越好（梯度估计更准，训练更稳定），但受限于显存。<br><br>
+            显存不够时用梯度累积模拟大 batch：<br>
+            <code>batch=8, accum=4 → 等效 batch=32</code><br><br>
+            注意：梯度累积时，每个 micro-batch 单独前向+反向，不用 <code>torch.no_grad()</code>，最后统一 optimizer.step()。累积过程中记得 loss 除以 accum_steps 归一化。
+          </p>
+        </div>
+        <div class="card">
+          <h4>梯度范数监控</h4>
+          <p>
+            "健康"的梯度范数（grad_norm）：<br><br>
+            · 训练初期（step 1-100）：1.0-10.0（正常，参数随机初始化）<br>
+            · 正常训练中：0.1-2.0<br>
+            · &gt;5.0 持续出现：学习率过大或模型不稳定<br>
+            · &gt;100 或 inf/nan：梯度爆炸，立即降低 lr<br><br>
+            添加监控：<br>
+            <code>norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)</code><br>
+            <code>wandb.log({"grad_norm": norm.item()})</code>
+          </p>
+        </div>
+        <div class="card">
+          <h4>序列长度课程学习</h4>
+          <p>
+            渐进式序列长度策略（显著提升训练效率）：<br><br>
+            <span class="step-badge">阶段1</span> seq=128，epoch 1：用 4× 更多样本学习基础语言能力<br>
+            <span class="step-badge">阶段2</span> seq=256，epoch 2：学习短段落理解<br>
+            <span class="step-badge">阶段3</span> seq=512，epoch 3-5：最终目标长度<br><br>
+            为什么有效：短序列时同等显存可以用 4× 的 batch size，梯度估计更准，学习基础语法更快。GPT-3 和 LLaMA-2 都用了这个技巧。
+          </p>
+        </div>
+        <div class="card">
+          <h4>训练轮数与过拟合检测</h4>
+          <p>
+            <strong>预训练</strong>：1-2 epoch（数据够多时）<br>
+            <strong>SFT</strong>：3-5 epoch（数据少时）<br>
+            <strong>RLHF</strong>：1-2 epoch<br><br>
+            过多 epoch = 过拟合信号：<br>
+            · train_loss 持续下降但 val_loss 开始上升<br>
+            · 模型开始"背诵"训练数据（用训练集问题测试输出完全一致）<br>
+            · 生成多样性下降（同一 prompt 反复给出几乎相同的回答）<br><br>
+            对策：Early stopping；Dropout 0.1；数据增强
+          </p>
+        </div>
+        <div class="card">
+          <h4>Batch 组成与课程学习</h4>
+          <p>
+            <strong>随机混合</strong>（默认）：每 batch 随机采样，简单但忽略难度差异<br><br>
+            <strong>难度课程学习</strong>：先喂简单样本，后期引入困难样本<br>
+            · 按 seq_len 排序从短到长<br>
+            · 按困惑度排序从低到高<br>
+            · 效果：早期学习更高效，最终精度相当或略好<br><br>
+            <strong>Hard Example Mining</strong>：周期性识别模型仍然预测错误的样本，在下一个 epoch 中上采样这些样本（类似 AdaBoost 的思想）。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ S5 ══ -->
+    <div class="lesson-section" id="s5">
+      <div class="section-label">CHAPTER 4 · 实战指南</div>
+      <h2 class="section-title">常见问题诊断</h2>
+      <p class="section-lead">训练不顺时，按照以下清单逐项排查。每个症状对应不同的根本原因，快速定位可以节省数小时的时间。</p>
+
+      <div class="callout why"><strong>健康训练曲线的形状特征：</strong>
+        初始 loss 应该接近 ln(vocab_size)（随机猜测的熵上界）。之后经历三个阶段：
+        (1) 快速下降期（前5-10%步数）：模型学习基本统计规律，每步 loss 显著下降；
+        (2) 稳定下降期（中间80%）：loss 平滑下降，偶有小幅震荡，这是正常现象；
+        (3) 收益递减期（后10-15%）：loss 下降变缓，接近模型容量上限。
+        异常信号：早期 loss 下降后突然上升（lr 过大触发梯度爆炸）；loss 平台很长不动（lr 过小或数据有问题）；周期性尖峰（batch 里有异常样本）。
+      </div>
+
+      <div class="diagram">
+<span class="hlr">问题：loss 从一开始就不下降（停在 ln(vocab_size) ≈ 8.8）</span>
+可能原因：
+  1. 学习率太小（lr &lt; 1e-6），梯度几乎没更新
+  2. 数据 tokenize 错误，label 全为 -100
+  3. 模型没有正确加载权重（随机初始化）
+诊断：打印 optimizer.param_groups[0]['lr'] 和 labels.sum()
+
+<span class="hlr">问题：loss 急剧波动（NaN 或 inf）</span>
+可能原因：
+  1. 学习率太大，梯度爆炸
+  2. 数据里有特殊字符导致 tokenize 异常（产生超长序列）
+  3. FP16 下 Attention logit 溢出（改用 BF16 或降 lr）
+解决：降 lr 10×，检查数据，确认 clip_grad_norm max_norm=1.0
+
+<span class="hlr">问题：模型会说话但回答永远跑题/重复</span>
+可能原因：
+  1. SFT 数据的 label mask 没有正确设置（prompt 部分没有 mask 掉，模型在学对问题）
+  2. SFT 数据质量差（回答都是套话/模板）
+  3. repetition_penalty 未设置（推理时加 rp=1.1-1.3）
+诊断：打印一个 batch 的 labels，检查 -100 的分布比例（应该约 60-70%）
+
+<span class="hlr">问题：模型只输出英文，即使训练数据是中文</span>
+可能原因：
+  1. Tokenizer 词表覆盖中文字符不足（UNK 率高）
+  2. Embedding 层权重没有正确初始化中文词汇
+  3. 预训练权重来自英文模型，中文字符的 embedding 是随机的
+修复：检查 unk_rate；若 &gt;10%，需要从头训练或更换 tokenizer
+
+<span class="hlr">问题：模型回答总是很短</span>
+可能原因：
+  SFT 数据集中答案长度分布偏短（如大量只有一行的答案）
+  模型学到"短答案是高频的"，倾向于提早生成 EOS
+修复：统计 SFT 数据回复长度分布；剔除或降采样 &lt;50 token 的回复
+      补充一些长格式回复（详细解释、分步骤回答）
+
+<span class="hlr">问题：loss 很低但模型输出是乱码/重复</span>
+可能原因：
+  标签泄漏（Label Leakage）：模型在输入里已经看到了答案
+  训练时 input_ids 和 labels 对齐错误（off-by-one shift 问题）
+诊断：打印 input_ids[0] 和 labels[0]，确认 labels 是 input_ids 的右移一位
+
+<span class="hlr">问题：训练初期正常，后期质量突然下降</span>
+可能原因：
+  学习率在 warmup 后太高，后期出现梯度震荡
+  余弦衰减的最低点（min_lr）设置过高
+修复：检查 lr_scheduler 曲线；将 min_lr 设为 max_lr 的 10%
+
+<span class="hlr">问题：OOM（CUDA Out of Memory）</span>
+快速解决（按效果排序）：
+  1. 减半 batch_size，增倍 accumulation_steps
+  2. 开 gradient_checkpointing=True（内存减半，速度降约 30%）
+  3. 减小 max_seq_len（512 → 256）
+  4. 用 bfloat16 代替 float32
+  5. 使用 DeepSpeed ZeRO-2 分片优化器状态</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>梯度流调试技巧</h4>
+          <p>
+            用 register_hook 可视化每层梯度大小：<br><br>
+            <code>grad_norms = {}</code><br>
+            <code>for name, p in model.named_parameters():</code><br>
+            <code>&nbsp;&nbsp;if p.requires_grad:</code><br>
+            <code>&nbsp;&nbsp;&nbsp;&nbsp;p.register_hook(lambda g, n=name:</code><br>
+            <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;grad_norms.update({n: g.norm().item()}))</code><br><br>
+            健康模式：各层梯度范数相近（0.01-1.0），浅层略大。若某层梯度为0，可能是该层被冻结或存在梯度消失。
+          </p>
+        </div>
+        <div class="card">
+          <h4>激活值统计监控</h4>
+          <p>
+            用 forward hook 检测异常激活：<br><br>
+            · <strong>Dead neurons（激活值恒为0）</strong>：GELU/SwiGLU 下较少见，但若 &gt;20% 的神经元 activation 均值接近0，说明该层学习不充分<br><br>
+            · <strong>激活值饱和</strong>：若 LayerNorm 输入的均值 &gt;10 或方差 &gt;100，说明数值不稳定，检查 embedding 初始化<br><br>
+            · 在每100步打印一次各层的 activation mean/std，可以早期发现数值问题
+          </p>
+        </div>
+        <div class="card">
+          <h4>swanlab / wandb 应追踪的指标</h4>
+          <p>
+            必须追踪：<br>
+            · train_loss, val_loss（每100步）<br>
+            · learning_rate（实际值，非初始值）<br>
+            · grad_norm（每步）<br><br>
+            推荐追踪：<br>
+            · token_accuracy（非 loss，直觉更好）<br>
+            · sequence_length_mean（验证课程学习）<br>
+            · gpu_memory_allocated<br>
+            · tokens_per_second（监控训练效率）<br><br>
+            可选：<br>
+            · 每1000步生成一个固定测试 prompt 的输出（直观感知质量变化）
+          </p>
+        </div>
+        <div class="card">
+          <h4>Checkpoint A/B 测试方法</h4>
+          <p>
+            <strong>自动化评估（lm-eval）：</strong><br>
+            对两个 checkpoint 跑相同基准（HellaSwag/MMLU），比较分数差<br><br>
+            <strong>人工盲评：</strong><br>
+            准备 20 个固定测试问题，对两个模型的输出随机打乱顺序，由评测人员在不知道来源的情况下选择更好的回答。胜率 &gt;60% 视为有显著改进。<br><br>
+            <strong>自动指标：</strong><br>
+            ROUGE-L（摘要任务）、BLEU（翻译）、Exact Match（问答）
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ S6 ══ -->
+    <div class="lesson-section" id="s6">
+      <div class="section-label">CHAPTER 4 · 实战指南</div>
+      <h2 class="section-title">可以优化的地方（系统级）</h2>
+      <p class="section-lead">除了第三章里提到的架构优化，这里列出系统和训练层面可以改进的地方，按照性价比排序。每项给出实测收益、实现难度和生产使用情况。</p>
+
+      <table class="cost-table">
+        <tr><th>优化项</th><th>速度提升</th><th>显存节省</th><th>实现难度</th><th>谁在用</th></tr>
+        <tr><td>Flash Attention 2</td><td>2-4×（长序列）</td><td>50%</td><td>★★☆☆☆</td><td>LLaMA-2, Mistral, Falcon</td></tr>
+        <tr><td>torch.compile</td><td>20-40%</td><td>0</td><td>★☆☆☆☆</td><td>PyTorch 2.0+ 默认推荐</td></tr>
+        <tr><td>梯度检查点</td><td>-30%（慢）</td><td>60-70%</td><td>★☆☆☆☆</td><td>几乎所有大模型训练</td></tr>
+        <tr><td>序列 Packing</td><td>1.5-2×</td><td>10%</td><td>★★★☆☆</td><td>GPT-4, LLaMA-3</td></tr>
+        <tr><td>DeepSpeed ZeRO</td><td>线性扩展</td><td>75%（ZeRO-3）</td><td>★★★★☆</td><td>BLOOM, 大多数 70B+</td></tr>
+        <tr><td>MoE</td><td>同等计算量</td><td>需更多显存</td><td>★★★★☆</td><td>Mixtral, GPT-4（传言）</td></tr>
+      </table>
+
+      <div class="cards">
+        <div class="card"><h4>优化 1：Flash Attention 2</h4><p>
+          <strong>现状</strong>：代码用 <code>F.scaled_dot_product_attention</code>（Flash Attn 1 的 PyTorch 版）<br>
+          <strong>改进</strong>：安装 flash-attn 包，改用 <code>flash_attn.flash_attn_func</code><br>
+          <strong>效果</strong>：seq=2048 时速度提升 2-4×，显存节省 50%（不存储整个 attention matrix）<br>
+          <strong>原理</strong>：分块计算 attention，每次只将一个块加载到 SRAM（快存储），避免反复读写 HBM（慢存储）<br>
+          <strong>成本</strong>：pip install flash-attn（约10分钟编译），改 5 行代码
+        </p></div>
+        <div class="card"><h4>优化 2：torch.compile</h4><p>
+          <strong>现状</strong>：代码支持 <code>--use_compile 1</code> 但默认关闭<br>
+          <strong>改进</strong>：开启 <code>torch.compile(model, mode="reduce-overhead")</code><br>
+          <strong>效果</strong>：训练速度提升 20-40%（消除 Python 解释器开销，生成优化的 CUDA kernel）<br>
+          <strong>模式选择</strong>：<code>"default"</code> 最通用；<code>"reduce-overhead"</code> 适合固定 shape；<code>"max-autotune"</code> 编译时间长但最快<br>
+          <strong>成本</strong>：第一个 batch 需要编译（约 1-2 分钟），后续全部加速
+        </p></div>
+        <div class="card"><h4>优化 3：梯度检查点（Gradient Checkpointing）</h4><p>
+          <strong>原理</strong>：正常训练时，所有层的激活值都保存用于反向传播。梯度检查点不保存中间激活，反向传播时重新计算。<br>
+          <strong>效果</strong>：激活内存减少约 √num_layers 倍（8层减少约 2.8×），代价是额外约 33% 的前向计算<br>
+          <strong>使用</strong>：<code>model.gradient_checkpointing_enable()</code>（HuggingFace API）或在 nn.Module 里用 <code>torch.utils.checkpoint.checkpoint()</code><br>
+          <strong>适用场景</strong>：显存不足时的首选解决方案，几乎没有代码改动成本
+        </p></div>
+        <div class="card"><h4>优化 4：增加词表大小</h4><p>
+          <strong>现状</strong>：vocab_size=6400（极小，字符级 + 少量词组）<br>
+          <strong>改进</strong>：用 sentencepiece/tiktoken 训练 32000 或 64000 词表<br>
+          <strong>效果</strong>：中文 token 数减少 30-50%（"北京" 从 2 tokens 变 1 token），可以处理更长的上下文，支持多语言<br>
+          <strong>代价</strong>：embedding 层参数量增加（32K×768 = 24.6M vs 6.4K×768 = 4.9M），需要重新训练 tokenizer
+        </p></div>
+        <div class="card"><h4>优化 5：Sequence Packing</h4><p>
+          <strong>问题</strong>：每条样本 pad 到 max_length，大量无效 padding token 参与计算<br>
+          <strong>解决</strong>：把多条短文本拼接成一条长序列，中间用特殊分隔符，用 block-diagonal attention mask 隔开不同样本<br>
+          <strong>效果</strong>：有效 token 比例从 30-60% 提升到 90%+，等于以相同计算量处理了 2× 的实际数据<br>
+          <strong>成本</strong>：需要修改 dataset 和 collate_fn，并且 attention 需要支持 cu_seqlens 参数（Flash Attention 2 支持）
+        </p></div>
+        <div class="card"><h4>优化 6：MoE（混合专家）</h4><p>
+          <strong>现状</strong>：代码支持 <code>--use_moe 1</code>，4个专家 Top-1 路由<br>
+          <strong>效果</strong>：参数量翻 4 倍但每步计算量不变，等于用 4× 的模型容量处理信息<br>
+          <strong>挑战</strong>：负载均衡（防止所有 token 都路由到同一个专家）；Expert Collapse（部分专家从不被使用）<br>
+          <strong>负载均衡损失</strong>：<code>L_bal = α · Σ(f_i · p_i)</code>，f_i 是专家使用频率，p_i 是路由概率
+        </p></div>
+        <div class="card"><h4>优化 7：知识蒸馏（Knowledge Distillation）</h4><p>
+          <strong>目标</strong>：训练小模型模拟大模型的行为，实现 90% 的能力用 30% 的参数<br>
+          <strong>方法</strong>：蒸馏损失 = α×CE(hard labels) + (1-α)×KL(soft labels)，soft labels 是大模型的 token 概率分布（温度 T=2-4 软化）<br>
+          <strong>效果</strong>：DistilBERT（BERT 40% 大小，97% 性能）；DistilGPT-2（GPT-2 Small 70% 大小）<br>
+          <strong>前提</strong>：需要有一个训练好的 teacher 模型（可以是 GPT-4 的 logprobs 或开源大模型）
+        </p></div>
+        <div class="card"><h4>优化 8：LoRA 持续学习</h4><p>
+          <strong>问题</strong>：给已训练模型加新领域时，全量微调会"灾难性遗忘"旧能力<br>
+          <strong>LoRA 方法</strong>：冻结原始权重 W，只训练低秩分解 ΔW = A·B（rank r≪d），参数量约为全量的 0.1-1%<br>
+          <strong>优点</strong>：可以同时维护多个 LoRA adapter（每个领域一个），推理时按需加载，不遗忘<br>
+          <strong>工具</strong>：pip install peft（HuggingFace PEFT 库，5 行代码集成 LoRA）
+        </p></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ S7 ══ -->
+    <div class="lesson-section" id="s7">
+      <div class="section-label">CHAPTER 4 · 实战指南</div>
+      <h2 class="section-title">训练成本详细估算</h2>
+      <p class="section-lead">让你在开始训练之前，对时间和金钱成本有清晰预期。包括不同 GPU 类型、云服务商、预算规划，以及免费资源的最大化利用。</p>
+
+      <table class="cost-table">
+        <tr><th>任务</th><th>数据量</th><th>GPU</th><th>时间</th><th>约成本（云端）</th></tr>
+        <tr><td>预训练（小验证）</td><td>1亿 tokens</td><td>1× A100</td><td>1小时</td><td>$2.5</td></tr>
+        <tr><td>预训练（基础）</td><td>10亿 tokens</td><td>1× A100</td><td>10小时</td><td>$25</td></tr>
+        <tr><td>预训练（完整）</td><td>100亿 tokens</td><td>4× A100</td><td>25小时</td><td>$250</td></tr>
+        <tr><td>SFT（快速实验）</td><td>5万条对话</td><td>1× RTX 4090</td><td>2小时</td><td>$1</td></tr>
+        <tr><td>SFT（正式训练）</td><td>100万条对话</td><td>1× A100</td><td>8小时</td><td>$20</td></tr>
+        <tr><td>DPO 对齐</td><td>5万偏好对</td><td>1× A100</td><td>3小时</td><td>$7.5</td></tr>
+      </table>
+
+      <table class="cost-table" style="margin-top:20px">
+        <tr><th>GPU 型号</th><th>显存</th><th>FP16 TFLOPS</th><th>参考价（云端/h）</th><th>token吞吐（0.1B，seq=512）</th><th>适合场景</th></tr>
+        <tr><td>H100 SXM</td><td>80GB</td><td>989</td><td>$3.5（Lambda）</td><td>~320K tok/s</td><td>生产训练，大 batch</td></tr>
+        <tr><td>A100 80GB</td><td>80GB</td><td>312</td><td>$2.5（Lambda）</td><td>~180K tok/s</td><td>标准大模型训练</td></tr>
+        <tr><td>A10G</td><td>24GB</td><td>125</td><td>$0.75（AWS）</td><td>~70K tok/s</td><td>中等规模 SFT</td></tr>
+        <tr><td>RTX 4090</td><td>24GB</td><td>82</td><td>$0.5（Vast.ai）</td><td>~60K tok/s</td><td>性价比最高</td></tr>
+        <tr><td>V100 16GB</td><td>16GB</td><td>112</td><td>$0.55（云端）</td><td>~45K tok/s</td><td>老一代，尚可用</td></tr>
+        <tr><td>T4 16GB</td><td>16GB</td><td>65</td><td>$0.35（GCP）</td><td>~25K tok/s</td><td>推理，轻量 SFT</td></tr>
+        <tr><td>M2 Ultra（本地）</td><td>192GB</td><td>~27（MPS）</td><td>硬件摊销</td><td>~8K tok/s</td><td>代码验证，本地实验</td></tr>
+      </table>
+
+      <div class="callout key"><strong>云服务商比较：</strong>
+        <br>· <strong>AWS EC2（p3/p4）</strong>：最稳定，但最贵（A100 约 $4/h），适合企业生产。On-demand 即开即用
+        <br>· <strong>GCP（A100/H100）</strong>：价格与 AWS 相近，TPU v4 有时有价格优势
+        <br>· <strong>Lambda Labs</strong>：专注 GPU 租用，A100 约 $2.5/h，稳定，适合研究
+        <br>· <strong>Vast.ai</strong>：P2P GPU 市场，RTX 4090 可低至 $0.3/h（spot 实例），但稳定性略差，需要预期中断
+        <br>· <strong>RunPod</strong>：易用界面，秒级部署，价格介于 Lambda 和 Vast.ai 之间，适合初学者
+      </div>
+
+      <div class="callout tip"><strong>$100 预算的最优分配：</strong>
+        <br><span class="step-badge">$5 · 快速实验</span> 用 RTX 4090（Vast.ai）跑 10 次不同超参的小模型实验（hidden=256），找到数据和配置是否正常
+        <br><span class="step-badge">$30 · SFT 正式训练</span> 租 A100，在清洗好的 50 万条数据上跑完整 SFT，约 6 小时
+        <br><span class="step-badge">$20 · 迭代1次</span> 根据首次 SFT 结果分析问题，补充数据，再跑一次
+        <br><span class="step-badge">$15 · DPO 对齐</span> 收集 5000 条偏好对，做一次 DPO 对齐训练
+        <br><span class="step-badge">$30 · 预留</span> 用于后续调试和意外重跑
+      </div>
+
+      <div class="cards">
+        <div class="card"><h4>免费资源最大化</h4><p>
+          <strong>Kaggle Notebooks</strong>：30小时/周的 P100（16GB）或 T4×2，无需信用卡，适合跑 SFT 实验<br><br>
+          <strong>Google Colab Pro</strong>：$10/月，A100 访问权（非保证），适合短期实验<br><br>
+          <strong>HuggingFace Spaces（推理）</strong>：免费 CPU/GPU 推理，不适合训练但可以展示模型<br><br>
+          <strong>Google TPU Research Cloud</strong>：申请即可免费使用 TPU，适合学生和研究人员（需要写申请）
+        </p></div>
+        <div class="card"><h4>总拥有成本（TCO）</h4><p>
+          除了 GPU 计费，还需考虑：<br><br>
+          <strong>存储成本</strong>：100B token 预训练数据 ≈ 200GB，S3 存储约 $4.5/月<br>
+          检查点存储：每个 0.1B 检查点约 200MB（fp16），50 个检查点 ≈ 10GB ≈ $0.23/月<br><br>
+          <strong>网络传输</strong>：下载 HuggingFace 数据集到 AWS 区域外会产生出口流量费，建议在同区域租用实例<br><br>
+          <strong>监控成本</strong>：wandb 免费版足够（100GB 存储），swanlab 国内可用
+        </p></div>
+        <div class="card"><h4>效率指标</h4><p>
+          <strong>Tokens per Dollar（TPD）</strong>：衡量训练性价比<br>
+          RTX 4090（Vast.ai）：60K tok/s ÷ $0.3/h ÷ 3600 = 200K tok/$，最高<br>
+          A100（Lambda）：180K tok/s ÷ $2.5/h ÷ 3600 = 72K tok/$<br>
+          H100（Lambda）：320K tok/s ÷ $3.5/h ÷ 3600 = 91K tok/$<br><br>
+          <strong>MFU（Model FLOPS Utilization）</strong>：实际 FLOPS / 峰值 FLOPS<br>
+          优化后的训练约 40-60% MFU。低于 30% 说明有优化空间（通常是 I/O 瓶颈）
+        </p></div>
+        <div class="card"><h4>何时扩大规模？决策框架</h4><p>
+          <strong>验证数据后再扩规模</strong>：先用 1% 的数据跑一个小模型，确认 loss 正常下降，再投入全量资源<br><br>
+          <strong>观察 val_loss 平台</strong>：若 val_loss 下降变缓（连续 5000 步下降 &lt;1%），是扩大数据量的信号<br><br>
+          <strong>缩放律预测</strong>：根据 Chinchilla 规律，预测全量数据下的最终 loss，若与小模型实验的趋势一致，可以安全扩规模<br><br>
+          <strong>不要过早扩规模</strong>：数据问题在小实验里会同样出现，先解决再扩
+        </p></div>
+        <div class="card"><h4>MAC M 系列能跑吗？</h4><p>
+          完全可以！MPS（Metal Performance Shaders）支持 PyTorch 训练。<br><br>
+          M2 Pro 16GB 可以跑：<br>
+          <code>hidden=512, batch=4, seq=256</code><br>
+          速度约 A100 的 1/10，但完全够验证代码和小规模实验。<br><br>
+          M2/M3 Ultra（192GB 统一内存）甚至可以跑 0.1B 模型的完整 SFT，速度约 A100 的 1/4。<br><br>
+          注意：MPS 不支持所有 CUDA 算子，部分代码需要回退到 CPU。bfloat16 在 M2 上支持较好。
+        </p></div>
+        <div class="card"><h4>最省钱的起步路径</h4><p>
+          <span class="step-badge">1</span> 本地跑通代码（任何机器，CPU 也行）<br>
+          <span class="step-badge">2</span> 用 MiniMind 的预训练权重（跳过预训练阶段）<br>
+          <span class="step-badge">3</span> 在 Kaggle 用免费 T4 做第一次 SFT（5万条数据，约 3 小时）<br>
+          <span class="step-badge">4</span> 分析输出质量，找出薄弱点<br>
+          <span class="step-badge">5</span> 租 1× A100（Lambda Labs），针对性补充数据后正式 SFT，约 2-4 小时 = $5-10<br>
+          <span class="step-badge">6</span> 下载权重本地测试，根据效果迭代数据
+        </p></div>
+      </div>
+    </div>
+
+    <div class="section-nav">
+      <a href="ch3-multimodal.html">← 第三章：多模态架构</a>
+      <a href="index.html">回到目录 →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function scrollTo(id) {
+  document.getElementById(id).scrollIntoView({behavior:'smooth'});
+}
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting) {
+      document.querySelectorAll('.toc-item').forEach(a=>a.classList.remove('active'));
+      const map = {s0:0,s1:1,s2:2,s3:3,s4:4,s5:5,s6:6,s7:7};
+      const idx = map[entry.target.id];
+      if(idx !== undefined) {
+        document.querySelectorAll('.toc-item')[idx]?.classList.add('active');
+      }
+    }
+  });
+}, {root: document.getElementById('lessonPanel'), threshold:0.1});
+
+document.querySelectorAll('.lesson-section').forEach(s=>observer.observe(s));
+</script>
+</body>
+</html>

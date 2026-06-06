@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第三章：多模态架构 · MiniMind-O</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f6f8fa;--bg3:#eef1f4;--border:#d0d7de;
+  --text:#1f2328;--dim:#57606a;
+  --blue:#0969da;--green:#1a7f37;--yellow:#9a6700;--orange:#bc4c00;
+  --purple:#8250df;--red:#cf222e;--teal:#116329;--cyan:#0550ae;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;flex-direction:column}
+nav{height:46px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;z-index:100}
+nav a{font-size:.78rem;color:var(--dim);padding:4px 8px;border-radius:5px;transition:.15s}
+nav a:hover{background:var(--bg3);color:var(--text)}
+nav a.active{background:var(--bg3);color:var(--orange)}
+.nav-title{font-size:.82rem;font-weight:600;color:var(--text);margin-right:auto}
+.nav-sep{color:var(--border)}
+.split{display:flex;flex:1;overflow:hidden}
+.code-panel{width:46%;flex-shrink:0;background:#f8f9fa;border-right:1px solid var(--border);overflow-y:scroll;overflow-x:auto;font-family:'SF Mono',Consolas,monospace;font-size:.76rem;line-height:1.65}
+.code-panel-header{position:sticky;top:0;background:#f8f9fa;border-bottom:1px solid var(--border);padding:8px 16px;font-size:.72rem;color:var(--dim);display:flex;justify-content:space-between;z-index:10}
+.code-panel-header .fname{color:var(--cyan)}
+.code-table{width:100%;border-collapse:collapse}
+.code-table tr.hl-active{background:rgba(188,76,0,.08);border-left:2px solid var(--orange)}
+.code-table tr.hl-active td.ln{color:var(--orange)}
+.ln{width:42px;min-width:42px;text-align:right;padding:0 12px 0 8px;color:#8c959f;user-select:none;vertical-align:top}
+.lc{padding:0 16px 0 4px;white-space:pre;color:var(--text)}
+.kw{color:#cf222e}.cls{color:#0550ae}.str{color:#0a3069}.cmt{color:#6e7781;font-style:italic}.num{color:#953800}.dec{color:#6639ba}.slf{color:#cf222e}.blt{color:#116329}
+.toc{width:180px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg2);overflow-y:auto;padding:16px 0}
+.toc-item{display:block;padding:5px 14px;font-size:.73rem;color:var(--dim);border-left:2px solid transparent;transition:.15s;cursor:pointer}
+.toc-item:hover{color:var(--text);background:var(--bg3)}
+.toc-item.active{color:var(--orange);border-left-color:var(--orange);background:rgba(240,136,62,.06)}
+.lesson-panel{flex:1;overflow-y:scroll;padding:0}
+.lesson-section{padding:40px 44px 48px;border-bottom:1px solid var(--border);transition:background .2s}
+.lesson-section.in-view{background:rgba(240,136,62,.025)}
+.section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--orange);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-label .lines-badge{background:var(--bg3);border:1px solid var(--border);font-size:.68rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--dim);padding:1px 7px;border-radius:10px;font-family:monospace}
+.section-label .file-badge{background:rgba(240,136,62,.1);border:1px solid rgba(240,136,62,.25);color:var(--orange);padding:1px 7px;border-radius:10px;font-size:.68rem;font-weight:400;letter-spacing:0;text-transform:none}
+h2.section-title{font-size:1.45rem;font-weight:700;margin-bottom:12px;letter-spacing:-.02em}
+.section-lead{font-size:.95rem;color:var(--dim);line-height:1.7;margin-bottom:24px;max-width:680px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.card h4{font-size:.8rem;color:var(--orange);margin-bottom:6px;font-weight:600}
+.card p,.card li{font-size:.82rem;color:var(--dim);line-height:1.65}
+.card ul{list-style:none;padding:0}
+.card ul li::before{content:"·";margin-right:6px;color:var(--border)}
+code{font-family:monospace;background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:.83em;color:var(--orange)}
+.diagram{background:#f8f9fa;border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin:20px 0;font-family:'SF Mono',Consolas,monospace;font-size:.77rem;line-height:2;color:var(--dim);overflow-x:auto}
+.diagram .hl1{color:var(--orange)}.diagram .hl2{color:var(--blue)}.diagram .hl3{color:var(--green)}.diagram .hl4{color:var(--purple)}.diagram .hlr{color:var(--red)}
+.callout{border-radius:8px;padding:12px 16px;margin:16px 0;font-size:.85rem;line-height:1.7}
+.callout.why{background:rgba(9,105,218,.05);border-left:3px solid var(--blue)}
+.callout.why strong{color:var(--blue)}
+.callout.tip{background:rgba(26,127,55,.05);border-left:3px solid var(--green)}
+.callout.tip strong{color:var(--green)}
+.callout.warn{background:rgba(154,103,0,.05);border-left:3px solid var(--yellow)}
+.callout.warn strong{color:var(--yellow)}
+.callout.key{background:rgba(130,80,223,.05);border-left:3px solid var(--purple)}
+.callout.key strong{color:var(--purple)}
+.formula{text-align:center;font-family:monospace;font-size:.9rem;color:var(--purple);background:var(--bg3);padding:12px 20px;border-radius:8px;margin:16px 0}
+.anno-block{background:#f8f9fa;border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin:16px 0;font-family:'SF Mono',Consolas,monospace;font-size:.78rem;line-height:1.8;color:var(--text);overflow-x:auto}
+.anno-block .ab-label{color:var(--green);font-weight:700;margin-bottom:4px;display:block}
+.anno-block .ab-code{color:var(--orange)}
+.anno-block .ab-comment{color:var(--dim);font-style:italic}
+.shape-flow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:16px 0;font-size:.8rem}
+.shape-box{background:var(--bg3);border:1px solid var(--border);padding:4px 12px;border-radius:6px;font-family:monospace;color:var(--teal)}
+.shape-arrow{color:var(--dim)}
+.section-nav{display:flex;justify-content:space-between;padding:24px 44px;border-top:1px solid var(--border);background:var(--bg2)}
+.section-nav a{font-size:.85rem;color:var(--orange)}
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html">← 目录</a>
+  <span class="nav-sep">|</span>
+  <span class="nav-title">第三章 · 多模态架构</span>
+  <a href="ch1-core.html">Ch1 核心</a>
+  <a href="ch2-training.html">Ch2 训练</a>
+  <a href="ch3-multimodal.html" class="active">Ch3 多模态</a>
+  <a href="ch4-guide.html">Ch4 实战指南</a>
+</nav>
+<div class="split">
+  <div class="code-panel" id="codePanel">
+    <div class="code-panel-header">
+      <span class="fname">model/model_omni.py</span>
+      <span id="lineInfo">L1 – 461</span>
+    </div>
+    <table class="code-table" id="codeTable"><tbody id="codeBody"></tbody></table>
+  </div>
+  <div class="toc" id="toc"></div>
+  <div class="lesson-panel" id="lessonPanel">
+
+    <div class="lesson-section" id="s0" data-start="1" data-end="9">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L1–9</span></div>
+      <h2 class="section-title">多模态系统总览 — 怎么做到多模态的？</h2>
+      <p class="section-lead">MiniMind-O 通过在原有纯文本 Transformer 基础上添加三个关键组件，实现了文本+音频+图像的多模态能力。整个文件 461 行，从外部编码器到流式生成，构成完整的多模态系统。</p>
+      <div class="diagram">
+<span class="hl1">多模态系统架构图：</span>
+
+音频输入 (wav)                  图像输入 (pixels)
+    ↓                               ↓
+<span class="hl2">SenseVoice</span> (冻结,234M)     <span class="hl2">SigLIP</span> (冻结,86M)
+    ↓ [T, 512]                      ↓ [64, 768]
+<span class="hl3">MMAudioProjector</span>             <span class="hl3">MMVisionProjector</span>
+    ↓ [T, 768]                      ↓ [64, 768]
+    └──────────────┐ ┌──────────────┘
+                   ↓ ↓
+         文本 Embedding [T, 768]
+    + 注入音频/图像特征（替换对应位置）
+                   ↓
+    ┌──────────────────────────────────┐
+    │  <span class="hl1">Thinker（文本主干）</span>              │
+    │  8 × MiniMindBlock              │
+    │                                  │
+    │  bridge_layer (第3层后)          │───→ bridge_states [T, 768]
+    │  ...                             │          ↓
+    │  最终输出 h_thinker              │   <span class="hl4">Talker（音频生成）</span>
+    │    ↓                             │   embed_proj(bridge) × text_scale
+    │  lm_head → text logits [T, 6400] │ + codec_proj(audio_emb) × audio_scale
+    └──────────────────────────────────┘          ↓
+                                            4 × MiniMindBlock
+                                                  ↓
+                                            TalkerHead → 8×[T, 2112]
+                                            (audio logits，8 层 codec)</div>
+      <div class="callout why"><strong>为什么选择"Projector投影器"方式而不是端对端融合？</strong>Projector方式可以复用已经训练好的专业编码器（SenseVoice在100万小时语音上训练，SigLIP在数十亿图文对上训练），这些编码器的知识不会因LLM训练而破坏。只需少量数据就能教会LLM理解它们的输出。</div>
+      <div class="callout key"><strong>三模态统一表示：</strong>无论是文字token（6400个词汇）、音频帧特征（512维→768维）还是图像patch特征（768维），最终都变成同样的768维向量序列，被同一套Transformer参数处理。模态融合发生在"嵌入空间"，而不是"特征空间"。</div>
+      <figure style="margin:20px 0">
+      <svg viewBox="0 0 620 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:620px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        <defs>
+          <marker id="om-a" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#57606a"/></marker>
+          <marker id="om-b" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#0969da"/></marker>
+          <marker id="om-o" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#bc4c00"/></marker>
+          <marker id="om-g" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#1a7f37"/></marker>
+        </defs>
+        <rect width="620" height="340" rx="10" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <text x="310" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2328">MiniMind-O 多模态架构总览</text>
+
+        <!-- Audio input -->
+        <rect x="20" y="38" width="110" height="28" rx="5" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="75" y="57" text-anchor="middle" font-size="10" fill="#bc4c00">音频输入 (wav)</text>
+        <!-- Vision input -->
+        <rect x="490" y="38" width="110" height="28" rx="5" fill="#eff6ff" stroke="#0969da" stroke-width="1.5"/>
+        <text x="545" y="57" text-anchor="middle" font-size="10" fill="#0969da">图像输入 (pixels)</text>
+        <!-- Text input -->
+        <rect x="255" y="38" width="110" height="28" rx="5" fill="#f0fdf4" stroke="#1a7f37" stroke-width="1.5"/>
+        <text x="310" y="57" text-anchor="middle" font-size="10" fill="#1a7f37">文本 tokens</text>
+
+        <!-- Encoders -->
+        <rect x="20" y="84" width="110" height="34" rx="5" fill="#fff7ed" stroke="#bc4c00" stroke-width="2"/>
+        <text x="75" y="99" text-anchor="middle" font-size="10" font-weight="700" fill="#bc4c00">SenseVoice</text>
+        <text x="75" y="112" text-anchor="middle" font-size="9" fill="#bc4c00">234M 冻结</text>
+        <rect x="490" y="84" width="110" height="34" rx="5" fill="#eff6ff" stroke="#0969da" stroke-width="2"/>
+        <text x="545" y="99" text-anchor="middle" font-size="10" font-weight="700" fill="#0969da">SigLIP</text>
+        <text x="545" y="112" text-anchor="middle" font-size="9" fill="#0969da">86M 冻结</text>
+
+        <!-- Projectors -->
+        <rect x="20" y="136" width="110" height="28" rx="5" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="75" y="155" text-anchor="middle" font-size="10" fill="#bc4c00">MMAudioProjector</text>
+        <rect x="490" y="136" width="110" height="28" rx="5" fill="#eff6ff" stroke="#0969da" stroke-width="1.5"/>
+        <text x="545" y="155" text-anchor="middle" font-size="10" fill="#0969da">MMVisionProjector</text>
+
+        <!-- Arrows from inputs to encoders -->
+        <line x1="75" y1="66" x2="75" y2="82" stroke="#bc4c00" stroke-width="1.5" marker-end="url(#om-o)"/>
+        <line x1="545" y1="66" x2="545" y2="82" stroke="#0969da" stroke-width="1.5" marker-end="url(#om-b)"/>
+        <line x1="75" y1="118" x2="75" y2="134" stroke="#bc4c00" stroke-width="1.5" marker-end="url(#om-o)"/>
+        <line x1="545" y1="118" x2="545" y2="134" stroke="#0969da" stroke-width="1.5" marker-end="url(#om-b)"/>
+
+        <!-- Inject into token stream -->
+        <line x1="75" y1="164" x2="200" y2="190" stroke="#bc4c00" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#om-o)"/>
+        <line x1="545" y1="164" x2="420" y2="190" stroke="#0969da" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#om-b)"/>
+
+        <!-- Token stream -->
+        <rect x="140" y="186" width="340" height="36" rx="6" fill="white" stroke="#d0d7de" stroke-width="1.5"/>
+        <text x="310" y="201" text-anchor="middle" font-size="11" fill="#57606a">统一 token 序列 [T, 768]</text>
+        <text x="310" y="215" text-anchor="middle" font-size="9" fill="#57606a">text tokens ＋ audio features ＋ image features（替换占位符）</text>
+        <line x1="310" y1="66" x2="310" y2="184" stroke="#1a7f37" stroke-width="1.5" marker-end="url(#om-g)"/>
+
+        <!-- Thinker -->
+        <rect x="155" y="234" width="310" height="48" rx="8" fill="#eff6ff" stroke="#0969da" stroke-width="2"/>
+        <text x="310" y="255" text-anchor="middle" font-size="13" font-weight="700" fill="#0969da">Thinker（文本主干）</text>
+        <text x="310" y="274" text-anchor="middle" font-size="10" fill="#0969da">8 × MiniMindBlock  →  lm_head  →  text logits [T, 6400]</text>
+        <line x1="310" y1="222" x2="310" y2="232" stroke="#57606a" stroke-width="1.5" marker-end="url(#om-a)"/>
+
+        <!-- Bridge -->
+        <line x1="155" y1="258" x2="80" y2="258" stroke="#8250df" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#om-a)"/>
+        <rect x="20" y="244" width="58" height="28" rx="5" fill="#faf5ff" stroke="#8250df" stroke-width="1.5"/>
+        <text x="49" y="260" text-anchor="middle" font-size="9" fill="#8250df">bridge</text>
+        <text x="49" y="272" text-anchor="middle" font-size="9" fill="#8250df">layer=3</text>
+
+        <!-- Talker -->
+        <line x1="49" y1="272" x2="49" y2="296" stroke="#8250df" stroke-width="1.5" marker-end="url(#om-a)"/>
+        <rect x="20" y="296" width="230" height="36" rx="7" fill="#fff7ed" stroke="#bc4c00" stroke-width="2"/>
+        <text x="135" y="311" text-anchor="middle" font-size="12" font-weight="700" fill="#bc4c00">Talker（音频生成头）</text>
+        <text x="135" y="325" text-anchor="middle" font-size="9" fill="#bc4c00">4 × MiniMindBlock  →  TalkerHead  →  audio codes [8, T, 2112]</text>
+
+        <!-- Mimi Codec -->
+        <rect x="370" y="296" width="230" height="36" rx="7" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="485" y="311" text-anchor="middle" font-size="11" font-weight="700" fill="#bc4c00">Mimi Codec 解码</text>
+        <text x="485" y="325" text-anchor="middle" font-size="9" fill="#bc4c00">8层 RVQ codes → PCM 波形 → 扬声器</text>
+        <line x1="250" y1="314" x2="368" y2="314" stroke="#bc4c00" stroke-width="1.5" marker-end="url(#om-o)"/>
+      </svg>
+      <figcaption style="text-align:center;font-size:.75rem;color:#57606a;margin-top:4px">紫色虚线 = bridge_states（Thinker 第3层输出传递给 Talker，携带语义信息）。</figcaption>
+      </figure>
+
+      <div class="cards" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="card"><h4>Thinker（文本主干，8层）</h4><p>原始MiniMind的Transformer，负责理解文字、音频、图像输入，生成文本回答。8层MiniMindBlock，每层含Multi-Head Attention + FFN。bridge_layer=3处向Talker传递中间状态。</p></div>
+        <div class="card"><h4>Talker（音频生成头，4层）</h4><p>专用于生成Mimi RVQ音频码的小型Transformer。接收Thinker的bridge_states作为语义指导，同时维护音频历史context，逐帧预测8层音频codec token。</p></div>
+        <div class="card"><h4>Projectors（模态桥梁）</h4><p>MMAudioProjector（512→768）和MMVisionProjector（768→768）两个轻量MLP，把外部编码器的特征空间对齐到Thinker的hidden空间。训练时只有这两个组件的权重被更新。</p></div>
+      </div>
+      <div class="cards">
+        <div class="card"><h4>三种模态的接入方式</h4><ul>
+          <li><strong>音频</strong>：SenseVoice 提取 mel → 投影到 hidden_size → 替换文本中 &lt;audio_pad&gt; 占位符</li>
+          <li><strong>图像</strong>：SigLIP 提取 patch 特征 → 投影 → 替换文本中 &lt;image_pad&gt; 占位符</li>
+          <li><strong>文本</strong>：原生 embedding，不需要额外编码器</li>
+        </ul></div>
+        <div class="card"><h4>为什么外部编码器冻结？</h4><p>SenseVoice 和 SigLIP 都是经过大规模预训练的专门模型，音频/视觉理解能力远超我们从头训练能达到的水平。冻结它们：1) 保留原有能力；2) 减少训练参数；3) 避免"灾难性遗忘"。只训练投影层来对齐特征空间。</p></div>
+      </div>
+    </div>
+
+    <div class="lesson-section" id="s1" data-start="10" data-end="30">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L10–30</span></div>
+      <h2 class="section-title">OmniConfig — 在 MiniMindConfig 上新增的字段</h2>
+      <p class="section-lead">OmniConfig 继承 MiniMindConfig，只添加多模态专用的配置项。这是 Python 继承的典型用法。</p>
+      <div class="cards">
+        <div class="card"><h4>Talker 配置</h4><ul>
+          <li><code>num_talker_hidden_layers = 4</code>：Talker 有 4 层 MiniMindBlock</li>
+          <li><code>talker_hidden_size = 768</code>：和 Thinker 相同，方便权重复用</li>
+        </ul></div>
+        <div class="card"><h4>音频配置</h4><ul>
+          <li><code>audio_hidden_size = 512</code>：SenseVoice 输出维度</li>
+          <li><code>audio_vocab_size = 2112</code>：Mimi codec 的词表（2048+64）</li>
+          <li><code>audio_pad/stop/spk_token</code>：3 个特殊 token id</li>
+          <li><code>spk_emb_size = 192</code>：说话人嵌入向量维度</li>
+        </ul></div>
+        <div class="card"><h4>视觉配置</h4><ul>
+          <li><code>image_hidden_size = 768</code>：SigLIP 输出维度</li>
+          <li><code>image_token_len = 64</code>：一张图片占 64 个 token 位置</li>
+          <li><code>image_ids = [12]</code>：&lt;|image_pad|&gt; 的 token id</li>
+        </ul></div>
+        <div class="card"><h4>bridge_layer = num_layers//2 - 1 = 3</h4><p>Thinker 在第 3 层（共 8 层）之后把中间 hidden_states 传给 Talker，叫做 bridge（桥接）。为什么不是最后一层？因为 Thinker 后半段会进一步做"文本预测"的高层抽象，而 Talker 需要的是更接近原始语义的表示。第 3 层之后，语义足够丰富但还没有被过度加工。</p></div>
+      </div>
+      <div class="callout why"><strong>bridge_layer=3 的选择理由：</strong>研究表明Transformer中间层包含最丰富的语义信息（太早=语法不完整，太晚=过度专化于文本预测）。第3层（8层中的第4层位置，从0开始）恰好处于语义形成完成、任务特化开始之前。</div>
+      <div class="callout tip"><strong>image_token_len=64 背后的计算：</strong>SigLIP使用32px×32px的patch，256px图像 → 8×8=64个patch。每个patch变成一个768维向量。相比LLaVA-1.5的576个图像token（336px/14px patch），MiniMind-O的64个token极大降低了计算成本。</div>
+      <div class="formula">bridge_layer = num_layers // 2 - 1 = 8 // 2 - 1 = 3  →  第0,1,2,3层后提取 bridge_states</div>
+    </div>
+
+    <div class="lesson-section" id="s2" data-start="31" data-end="55">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L31–55</span></div>
+      <h2 class="section-title">MMAudioProjector + MMVisionProjector — 特征对齐</h2>
+      <p class="section-lead">投影器（Projector）把外部编码器的特征空间"对齐"到 Thinker 的 hidden 空间。本质是一个小型 MLP。</p>
+      <div class="shape-flow">
+        <span class="shape-box">音频: [T, 512]</span>
+        <span class="shape-arrow">→ LayerNorm → Linear(512,768) → GELU → Linear(768,768) →</span>
+        <span class="shape-box">[T, 768]</span>
+      </div>
+      <div class="shape-flow">
+        <span class="shape-box">图像: [64, 768]</span>
+        <span class="shape-arrow">→ LayerNorm → Linear(768,768) → GELU → Linear(768,768) →</span>
+        <span class="shape-box">[64, 768]</span>
+      </div>
+      <div class="cards">
+        <div class="card"><h4>为什么用两层 Linear？</h4><p>一层 Linear 只能学线性变换。两层（中间加 GELU）能学非线性映射，处理不同编码器之间的非线性语义差异（SenseVoice 的特征空间和 Thinker 的不完全对齐，线性投影可能不够）。</p></div>
+        <div class="card"><h4>为什么先 LayerNorm？</h4><p>外部编码器的输出数值范围可能和 Thinker embedding 的数值范围差异很大（比如 SenseVoice 输出可能是 ±10，而 embed_tokens 输出是 ±1）。LayerNorm 先把特征归一化，确保 Linear 层接收到合理范围的输入，训练更稳定。</p></div>
+        <div class="card"><h4>可优化：更大的投影器</h4><p>两层 MLP 是最简单的设计。可以改成 4 层或使用 Cross-Attention 投影器（让文本 token 去"查询"音频/图像特征），这是 LLaVA、Flamingo 等模型的做法，理论上对齐效果更好。</p></div>
+        <div class="card"><h4>视觉 64 个 token 的来源</h4><p>SigLIP 处理 256×256 图像，patch_size=32，所以 patch 网格 = 8×8 = 64 个 patch，每个 patch 对应一个 768 维特征。64 个 token 是对图像细节和显存占用的平衡（CLIP 模型用 256，BLIP 用 64，LLaVA 1.5 用 256）。</p></div>
+      </div>
+      <div class="callout why"><strong>为什么投影器用两层Linear+GELU而不是单层Linear？</strong>单层线性投影只能做旋转和缩放，不能捕捉编码器输出和LLM嵌入空间之间的非线性关系。两层结构（bottleneck可选）+非线性激活，足以学习复杂的跨模态映射。</div>
+      <div class="anno-block">
+        <span class="ab-label">MMAudioProjector forward pass：</span>
+        <span class="ab-code">LayerNorm(512)</span> <span class="ab-comment">← 归一化SenseVoice输出的数值范围</span><br>
+        <span class="ab-code">→ nn.Linear(512 → 768)</span> <span class="ab-comment">← 升维：音频特征空间 → LLM空间</span><br>
+        <span class="ab-code">→ GELU()</span> <span class="ab-comment">← 非线性激活，捕捉跨模态非线性关系</span><br>
+        <span class="ab-code">→ Linear(768 → 768)</span> <span class="ab-comment">← 精炼：在LLM空间内进一步对齐</span>
+      </div>
+      <div class="callout tip"><strong>MMAudioProjector vs MMVisionProjector 的输入维度差异：</strong>SenseVoice输出512维（轻量级语音编码器），SigLIP输出768维（更大的视觉编码器）。音频投影器需要做512→768的升维，视觉投影器做768→768的精炼。</div>
+    </div>
+
+    <div class="lesson-section" id="s3" data-start="57" data-end="77">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L57–77</span></div>
+      <h2 class="section-title">TalkerHead + TalkerEmbedding — 层特异性 LoRA 设计</h2>
+      <p class="section-lead">Mimi codec 有 8 层，每一层有自己的语义（第 0 层是最粗粒度的音调结构，第 7 层是最细粒度的音色细节）。TalkerHead 和 TalkerEmbedding 用共享 base + 8 个独立 adapter 来处理这种层间差异。</p>
+      <div class="callout key"><strong>Mimi Codec 的 8 层是什么？</strong>Mimi 是 RVQ（残差量化编码器），把语音压缩成 8 层离散 codes。第 0 层编码语义内容（说了什么），第 1-7 层逐层编码更细的音色和音质细节（怎么说的、说话人音色）。这类似于 JPEG 的分层压缩，粗糙层先，细节层后。</div>
+      <div class="cards">
+        <div class="card">
+          <h4>TalkerHead 结构</h4>
+          <p>
+            <code>base: Linear(768, 2112)</code>  ← 共享基础分类头<br>
+            <code>adapters[i]: Linear(768,256) → GELU → Linear(256,2112)</code><br><br>
+            输出：<code>base(x) + adapters[i](x)</code>，对每层 i 独立。<br>
+            每层的词表概率 = 基础预测 + 该层特异性修正。
+          </p>
+        </div>
+        <div class="card">
+          <h4>TalkerEmbedding 结构</h4>
+          <p>
+            <code>base: Embedding(2112, 768)</code>  ← 共享 embedding<br>
+            <code>adapters[i]: Embedding(2112,256) → GELU → Linear(256,768)</code><br><br>
+            8 层的 codes 同时 lookup，每层用自己的 adapter，然后加权平均（除以 8）。
+          </p>
+        </div>
+        <div class="card"><h4>这类似 LoRA</h4><p>Low-Rank Adaptation（LoRA）的思想：用两个小矩阵 A×B 来表示大矩阵的变化。这里 rank=256，而 768×2112 的大矩阵被分解成 768→256→2112 的低秩路径。每个 adapter 的参数量是 (768+2112)×256 = 740K，比完整头 768×2112 = 1.6M 少 55%，但仍能捕捉层间差异。</p></div>
+        <div class="card"><h4>可优化：独立 head per layer</h4><p>最简单的设计是 8 个完全独立的分类头，但参数量是现在的 3 倍多。当前的 base+adapter 设计是效率和表达力的折中。也可以尝试用注意力机制（cross-layer attention）让不同层之间互相参考，理论上更好但更复杂。</p></div>
+      </div>
+      <div class="callout why"><strong>Mimi编解码器的8层RVQ（残差矢量量化）：</strong>第0层编码最粗糙的音频轮廓（音高、韵律），每层后续编码前一层的残差误差，第7层编码最细微的音色细节。解码时叠加所有8层的codebook向量，重建完整音频。</div>
+      <div class="formula">TalkerHead第i层：head_i(x) = base_proj(x) + B_i(A_i(x))  其中A_i∈R^{768×256}，B_i∈R^{256×2112}  — 这就是LoRA分解</div>
+      <div class="callout key"><strong>为什么8个码本需要8套独立的投影权重？</strong>每层码本编码不同抽象级别的音频特征，从粗粒度（第0层）到细粒度（第7层）。共用权重会让粗粒度和细粒度的预测相互干扰。</div>
+    </div>
+
+    <div class="lesson-section" id="s4" data-start="88" data-end="102">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L88–102</span></div>
+      <h2 class="section-title">TalkerModule — 音频生成的专用大脑</h2>
+      <p class="section-lead">TalkerModule 是整个音频生成的核心。它接收 Thinker 的 bridge_states 作为"语义指导"，同时结合历史音频 codes，预测下一步的 8 层音频 codes。</p>
+      <div class="diagram">
+<span class="hl1">TalkerModule 的输入融合（forward 里的 L301）：</span>
+
+bridge_states [B, T, 768]    ← 来自 Thinker 第3层的中间状态
+      ↓ embed_proj (768→768→768 + RMSNorm)
+  thinker_feat × text_scale(初始3.0)
+
+audio_ids [B, 8, T]          ← 8层历史音频 codes
+      ↓ TalkerEmbedding(2112, 768)
+  audio_emb [B, T, 768]
+      ↓ codec_proj (768→768→768 + RMSNorm)
+  audio_feat × audio_scale(初始1.0)
+
+<span class="hl2">fused = thinker_feat × text_scale + audio_feat × audio_scale</span>
+              ↓
+  4 × MiniMindBlock + RMSNorm
+              ↓
+  TalkerHead → 8 × [B, T, 2112]（8 层同时预测）</div>
+      <div class="cards">
+        <div class="card"><h4>text_scale=3.0, audio_scale=1.0</h4><p>两个可学习标量参数，初始值 3.0 和 1.0 表示"Thinker 语义比历史音频重要 3 倍"。训练时模型会调整这两个值。如果 audio_scale 最终变大，说明历史音频 codes 对预测下一步更重要；反之 text 更重要。</p></div>
+        <div class="card"><h4>spk_proj — 说话人控制 L99</h4><p><code>spk_proj = Linear(192, 768)</code>。当输入 audio_ids 里某个位置是 <code>audio_spk_token</code> 时，TalkerModule 不用 embedding 查表，而是用说话人嵌入向量（192维）投影到 768 维替换。这是音色克隆的接口。</p></div>
+        <div class="card"><h4>embed_proj vs codec_proj</h4><p>
+          <code>embed_proj</code>: Thinker 语义 → Talker 空间（跨网络投影）<br>
+          <code>codec_proj</code>: 音频 embedding → Talker 空间（提炼音频历史）<br><br>
+          两个投影分开，让模型可以独立学习"如何利用文本语义"和"如何利用历史音频"。
+        </p></div>
+        <div class="card"><h4>为什么 bridge 层而不是最终层？</h4><p>Thinker 最后一层的 hidden_states 已经高度优化用于预测下一个文字 token，其语义空间不一定适合音频生成。bridge_layer（第3层）的特征包含了足够的语义内容，但还保留了更多"感知层"的信息，更适合作为音频生成的指导。</p></div>
+      </div>
+      <div class="callout why"><strong>text_scale=3.0 vs audio_scale=1.0 的含义：</strong>Talker同时接收两个输入——来自Thinker的语义意图（bridge_states×text_scale）和自身的音频历史（codec_emb×audio_scale）。3:1的比例表示"语义指导比音频历史更重要"，这是可学习参数，初始化为这个比例。</div>
+      <div class="callout tip"><strong>embed_proj 的作用：</strong>bridge_states 已经是768维，为什么还要过一层线性层？bridge_states 来自Thinker（针对文本预测优化），embed_proj 把它"翻译"成Talker能理解的语音生成空间。就像英语→中文的翻译层。</div>
+      <div class="callout key"><strong>Talker的4层Block有自己的RoPE位置编码：</strong>Talker的时间步是音频帧序列（一帧≈12.5ms），与Thinker的文本token序列不同。独立的位置编码让Talker按音频时间轴组织生成，而不是按文本位置。</div>
+    </div>
+
+    <div class="lesson-section" id="s5" data-start="105" data-end="135">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L105–135</span></div>
+      <h2 class="section-title">MiniMindOmni 初始化 — 优雅的别名设计</h2>
+      <p class="section-lead">MiniMindOmni 继承自 MiniMindForCausalLM，通过 Python 的 object.__setattr__ 创建别名，让 Thinker 和 model 指向同一个对象。这是一个聪明的设计技巧。</p>
+      <div class="cards">
+        <div class="card"><h4>object.__setattr__ 的用法 L110–111</h4><p>
+          <code>self.thinker = self.model</code> 会触发 PyTorch 的模块注册（重复注册两次）。<br>
+          <code>object.__setattr__(self, 'thinker', self.model)</code> 绕过 PyTorch 的 <code>__setattr__</code>，直接在 Python 层创建引用，不会重复注册模块。<br><br>
+          效果：<code>self.thinker is self.model</code> 为 True，但 state_dict 里只有一个 <code>model.xxx</code>，没有重复的 <code>thinker.xxx</code>。
+        </p></div>
+        <div class="card"><h4>加载 SenseVoice L132–135</h4><p>用 FunASR 的 AutoModel 加载 SenseVoice Small，提取其中的 encoder 和 frontend 两部分：<br>encoder: 主体 Transformer 编码器<br>frontend: Mel 特征提取（60维 mel，LFR=6倍压缩后是 [T, 560]）<br><br>两者都冻结，梯度计算关闭。</p></div>
+        <div class="card"><h4>加载 SigLIP L184–196</h4><p>用 HuggingFace 加载 SigLIP base/patch32/256。SigLIP 是谷歌改进版的 CLIP，把 contrastive loss 换成 sigmoid loss，更稳定。直接用 <code>SiglipVisionModel</code> 提取图像特征，processor 负责把 PIL 图像预处理成 [3, 256, 256] tensor。</p></div>
+        <div class="card"><h4>Thinker/Talker 参数分布</h4><p>
+          Thinker (text model)：≈100M 参数<br>
+          Talker (audio head)：≈25M 参数（4层Block + TalkerHead + TalkerEmbedding）<br>
+          Audio proj：<1M<br>
+          Vision proj：<1M<br>
+          SenseVoice (冻结)：234M（不参与训练）<br>
+          SigLIP (冻结)：86M（不参与训练）
+        </p></div>
+      </div>
+      <div class="callout why"><strong>为什么用 object.__setattr__(self, 'thinker', self.model)？</strong>PyTorch的nn.Module.__setattr__会把赋值的Module注册为子模块（进入self._modules字典，影响state_dict的key前缀）。用object.__setattr__直接绕过这个机制，创建一个别名引用而不重复注册。</div>
+      <div class="callout tip"><strong>SenseVoice encoder 在CPU初始化，然后移动到device的原因：</strong>FunASR模型加载时会下载并验证权重，这个过程在CPU上完成。等权重加载完后再移动到GPU，避免在下载过程中占用GPU显存。</div>
+      <div class="callout key"><strong>SigLIP加载：</strong>使用HuggingFace的AutoModel.from_pretrained，自动识别模型类型，下载对应权重。SigLIP(ViT-B/32)共86M参数，冻结后不参与训练，只作为特征提取器。</div>
+    </div>
+
+    <div class="lesson-section" id="s6" data-start="137" data-end="181">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L137–181</span></div>
+      <h2 class="section-title">encode_audio + inject_audio — 音频特征注入</h2>
+      <p class="section-lead">音频特征的注入是"替换"而不是"拼接"：找到文本序列中所有 &lt;|audio_pad|&gt; 位置，用真实的音频特征向量替换掉这些位置的文本 embedding。</p>
+      <div class="diagram">
+<span class="hl1">encode_audio_inputs (L138)：</span>
+
+audio_inputs [B, 1, T_mel, 560]  ← mel 特征（SenseVoice 要求的格式）
+    ↓ batch_mask（过滤空音频）
+  valid_fbank [N_valid, T_mel, 560]
+    ↓ audio_encoder（冻结的 SenseVoice encoder）
+  emb [N_valid, T_enc, 512]        ← T_enc ≈ T_mel / 6（LFR压缩）
+    ↓ MMAudioProjector（对每个样本独立裁剪到 valid_len）
+  emb_list: List[Tensor([T_valid_i, 768])]  ← 每个样本长度不同
+
+<span class="hl1">inject_audio_features (L161)：</span>
+
+hidden_states [B, T_text, 768]    ← 文本 embedding 序列
+tokens: [B, T_text]               ← text token ids
+
+对每个 batch 样本：
+  找到连续的 audio_pad_token 区域（marker = 16）
+  计算 inject_len = min(audio_feat.size(0), 连续区长度)
+  hb = cat(hb[:start], audio_feat[:inject_len], hb[start+inject_len:])
+  → 原地替换，序列总长不变
+
+输出：hidden_states [B, T_text, 768]（部分位置已是真实音频特征）</div>
+      <div class="callout why"><strong>为什么是"替换"而不是"拼接"？</strong>拼接会改变序列长度，导致位置编码错位，需要调整所有后续计算。替换保持序列长度不变，位置编码正常，是更简洁的做法。代价是需要事先在文本里预留足够数量的 &lt;audio_pad&gt; 位置（dataset 里 audio_features_length 个连续 pad）。</div>
+      <div class="cards">
+        <div class="card"><h4>@torch.compiler.disable</h4><p>这个装饰器阻止 <code>torch.compile</code> 编译这个函数。原因：inject 里有动态的 list/loop（不同样本的音频长度不同，序列拼接位置动态变化），编译器无法提前知道 shape，会频繁重编译甚至报错。</p></div>
+        <div class="card"><h4>batch_mask 处理 L140–158</h4><p>同一个 batch 里可能有些样本有音频，有些没有（纯文本对话）。<code>batch_mask = audio_inputs.flatten(1).any(1)</code> 找出哪些样本有效。只对有效样本运行 encoder（省计算），结果再按原顺序还原。</p></div>
+      </div>
+      <div class="callout why"><strong>音频特征注入的核心思想：</strong>把embedding中'&lt;audio_pad&gt;'占位符对应的向量，用SenseVoice提取的真实音频特征替换掉。就像把一个模板文档中的'[姓名]'替换成真实姓名——模型看到的是连续的向量序列，不知道哪些来自文字，哪些来自音频。</div>
+      <div class="anno-block">
+        <span class="ab-label">inject_audio_features 核心替换逻辑：</span>
+        <span class="ab-code">mask = (tokens[b] == audio_pad_token)</span> <span class="ab-comment">← 找到所有audio_pad位置</span><br>
+        <span class="ab-code">start = mask.nonzero()[0].item()</span> <span class="ab-comment">← 连续区起点</span><br>
+        <span class="ab-code">inject_len = min(audio_feat.size(0), mask.sum().item())</span><br>
+        <span class="ab-code">h[b][start : start+inject_len] = audio_feat[:inject_len]</span> <span class="ab-comment">← 原地替换</span>
+      </div>
+      <div class="callout tip"><strong>@torch.compiler.disable 的必要性：</strong>inject_audio_features 中有动态形状操作（不同音频长度导致不同的切片大小）。torch.compile 需要静态形状才能生成优化的CUDA图，动态切片会导致频繁重新编译。禁用可以避免这个开销。</div>
+    </div>
+
+    <div class="lesson-section" id="s7" data-start="183" data-end="243">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L183–243</span></div>
+      <h2 class="section-title">视觉编码器 + count_vision_proj — 图像特征注入</h2>
+      <p class="section-lead">图像特征的注入和音频完全对称：找到 &lt;|image_pad|&gt; 占位符（连续 64 个），用 SigLIP 提取的 64 个 patch 特征替换。</p>
+      <div class="diagram">
+<span class="hl1">encode_image_inputs (L211)：</span>
+
+pixel_values [B, 3, 256, 256]
+    ↓ SigLIP VisionModel（冻结）
+  last_hidden_state [B, 64, 768]   ← 8×8 patch features
+    ↓ MMVisionProjector
+  vision_emb [B, 64, 768]
+
+<span class="hl1">count_vision_proj (L223)：</span>
+
+tokens [B, T_text]                ← 文本 token ids
+h      [B, T_text, 768]           ← 文本 embedding
+vf     [B, N_images, 64, 768]     ← 图像特征
+
+对每个 batch 样本，找到连续的 image_pad_token 区域（marker=12）：
+  start: 连续区开始位置
+  i - start: 连续区长度（= 64，已在 dataset 里确保）
+  hb = cat(hb[:start], vf[b][k][:i-start], hb[i:])[:seqlen]
+  k += 1  ← 下一张图的特征
+
+支持多张图（N_images > 1）</div>
+      <div class="cards">
+        <div class="card"><h4>为什么用 SigLIP 而不是 CLIP？</h4><p>SigLIP（Sigmoid Loss for Language Image Pre-training）是谷歌 2023 年论文，把 CLIP 的 InfoNCE 对比损失换成 binary sigmoid loss。主要优势：不需要在整个 batch 内做 softmax（更适合大 batch 训练），在相同参数量下性能更好。LLaVA 1.6、Idefics3 等主流 VLM 都改用 SigLIP。</p></div>
+        <div class="card"><h4>可优化：视觉 token 压缩</h4><p>64 个 token 占据序列较大比例（512 总长的 12.5%）。可以加一个 token merging（合并相似 patch）或 pooling 层把 64 压到 16 或 36。LLaVA-HR 就用了这种方法。代价是损失细节，好处是更多 token 可以用于文本。</p></div>
+        <div class="card"><h4>dummy gradient L310</h4><p>某些情况下（纯文本 batch）vision_proj 和 audio_proj 不参与 forward。DDP 要求所有参数都参与反向传播，否则报错。<code>0 × sum(params)</code> 产生 0 梯度但保持 DDP 的计算图完整。</p></div>
+        <div class="card"><h4>get_image_embeddings vs encode_image_inputs</h4><p><code>get_image_embeddings</code>：处理已经是字典格式的 pixel_values（SigLIP processor 的输出包含 pixel_values + pixel_attention_mask）<br><code>encode_image_inputs</code>：处理纯 tensor 格式的 pixel_values，更通用</p></div>
+      </div>
+      <div class="callout why"><strong>图像特征注入与音频的区别：</strong>音频长度可变（时间duration不固定→SenseVoice输出帧数不固定），图像总是64个token（固定大小图像→固定patch数）。因此图像注入更简单：找到64个连续的&lt;image_pad&gt;位置，替换为64个SigLIP特征向量。</div>
+      <div class="callout tip"><strong>多图像支持：</strong>count_vision_proj变量从0开始递增，每处理一张图像+1。同一对话中有3张图像时，pixel_values包含3个[1,3,256,256]张量，依次注入到3组&lt;image_pad&gt;占位符中。</div>
+      <div class="callout key"><strong>SigLIP与CLIP的区别：</strong>CLIP使用对比损失（cosine similarity + softmax），SigLIP使用sigmoid二元交叉熵（每个图文对独立判断是否匹配）。SigLIP在小batch size时训练更稳定，生成的视觉特征与语言模型嵌入空间的对齐更好。</div>
+    </div>
+
+    <div class="lesson-section" id="s8" data-start="245" data-end="316">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L245–316</span></div>
+      <h2 class="section-title">MiniMindOmni.forward() — 完整双头前向传播</h2>
+      <p class="section-lead">这是整个多模态系统的核心函数。理解它的执行流程，你就掌握了"Thinker 思考 + Talker 发声"的完整机制。</p>
+      <div class="diagram">
+<span class="hl1">forward() 执行流程：</span>
+
+input_ids: [B, 9, T] (训练) 或 [B, T] (推理文本only)
+    ↓ 拆分
+text_ids [B, T]  +  audio_ids [B, 8, T]
+
+<span class="hl1">──── Thinker 阶段 ────</span>
+
+text_ids → embed_tokens → hidden_states [B, T, 768]
+    ↓ (start_pos == 0 时注入模态特征)
+inject_audio_features: 替换 audio_pad 位置
+inject_vision_features: 替换 image_pad 位置
+    ↓
+bridge_states = hidden_states  (初始备份)
+    ↓
+Layer 0: MiniMindBlock → hidden_states, present_kv
+Layer 1: MiniMindBlock → hidden_states, present_kv
+Layer 2: MiniMindBlock → hidden_states, present_kv
+Layer 3: MiniMindBlock → hidden_states, present_kv
+    ↓ i == bridge_layer(3)
+  <span class="hl2">bridge_states = hidden_states</span>  ← 保存中间状态
+Layer 4: MiniMindBlock → hidden_states, present_kv
+    ...
+Layer 7: MiniMindBlock → hidden_states, present_kv
+    ↓
+h_thinker = norm(hidden_states) [B, T, 768]
+text_logits = lm_head(h_thinker) [B, T, 6400]
+
+<span class="hl1">──── Talker 阶段 ────</span>
+
+bridge_states → embed_proj → feat × text_scale
+audio_ids → TalkerEmbedding → codec_proj → feat × audio_scale
+    ↓ 加权融合
+fused_hidden [B, T, 768]
+    ↓
+Talker Layer 0: MiniMindBlock
+    ...
+Talker Layer 3: MiniMindBlock
+    ↓
+h_talker = norm(hidden) [B, T, 768]
+audio_logits = TalkerHead(h_talker) → <span class="hl3">8 个 [B, T, 2112]</span>
+
+<span class="hl1">输出：</span>
+out.logits = text_logits           ← 文本预测
+out.audio_logits = audio_logits    ← 8层音频预测
+out.past_key_values = presents     ← KV Cache（Thinker+Talker 合并）</div>
+      <div class="callout key"><strong>KV Cache 的特殊处理：</strong>presents 列表里有 8（Thinker）+ 4（Talker）= 12 组 KV，都存在 <code>past_key_values</code> 里。推理时每步只送最后一个 token，KV Cache 让 O(T²) 计算变成 O(T)。</div>
+      <div class="cards">
+        <div class="card"><h4>start_pos == 0 才注入 L269–287</h4><p>只在处理 prompt 时（start_pos=0，即第一步）注入音频和图像特征。推理时后续的 token 生成（start_pos>0）只送一个 token，没有 audio_pad 位置，不需要注入。</p></div>
+        <div class="card"><h4>2D vs 3D input_ids L246–252</h4><p>训练时：<code>[B, 9, T]</code>（9路），拆成 text_ids 和 audio_ids。推理文本接口：<code>[B, T]</code>（仅文本），audio_ids 用 audio_pad_token 填充。这让模型可以兼容标准 HuggingFace 的文本生成接口。</p></div>
+      </div>
+      <div class="callout why"><strong>为什么Thinker和Talker需要分开的KV Cache？</strong>两者处理不同的"时间线"：Thinker的KV Cache存储文本token序列的历史，Talker的KV Cache存储音频帧序列的历史。合并会导致位置索引混乱。</div>
+      <div class="anno-block">
+        <span class="ab-label">bridge_states 提取与传递：</span>
+        <span class="ab-code">bridge_states = hidden_states</span> <span class="ab-comment">← 第bridge_layer层后保存</span><br>
+        <span class="ab-code">if i == config.bridge_layer:</span><br>
+        <span class="ab-code">    bridge_states = hidden_states.clone()</span> <span class="ab-comment">← 克隆避免后续层修改</span><br>
+        <span class="ab-comment">... Thinker继续处理剩余层 ...</span><br>
+        <span class="ab-code">talker_out = self.talker(bridge_states, audio_ids, past_kv=talker_cache)</span> <span class="ab-comment">← 传给Talker</span>
+      </div>
+      <div class="callout tip"><strong>dummy_loss的必要性：</strong>在DDP（分布式训练）中，每个GPU处理不同的数据。某些batch可能没有图像，导致vision_proj不被使用，其梯度为None，DDP的all_reduce会报错。dummy_loss = 0 × sum(proj.weight) 让所有参数都有梯度（尽管是0），保证DDP正常工作。</div>
+    </div>
+
+    <div class="lesson-section" id="s9" data-start="318" data-end="395">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L318–395</span></div>
+      <h2 class="section-title">stream_generate() — 流式文字+语音同步生成</h2>
+      <p class="section-lead">这是最复杂也最有趣的部分：如何在生成文字的同时，实时生成对应的语音 codec tokens，做到"边说边讲"的流式体验。</p>
+      <div class="diagram">
+<span class="hl1">stream_generate() 的核心逻辑：</span>
+
+初始化：
+  input_ids = prompt tokens [1, T_prompt]
+  audio_buffer = [1, 8, T_prompt]，全填 audio_pad_token
+  audio_codes = [[], [], [], [], [], [], [], []]  ← 8层积累
+
+主循环（每步生成一个文本 token）：
+  step = input_ids.shape[1] - start_pos  ← 已生成数（0开始）
+  audio_step = step - 1                 ← 1步延迟
+
+  forward(cat(audio_buffer[:, :, -1:], input_ids[:, -1:]))
+  → text_logit, audio_logits[0..7]
+
+  <span class="hl1">采样 text_token（top_p）</span>
+
+  <span class="hl2">对 8 层 audio_logits 分别采样：</span>
+  if audio_step < i:           ← 第 i 层还没到激活步
+      audio_codes[i].append(audio_pad_token)
+  else:
+      top-50 采样（temperature=0.2, 轻微 rep_penalty）
+      code = sample from audio_logits[i]
+      audio_codes[i].append(code)
+      if code >= 2048: audio_stop_pos[i] = ...   ← 记录停止位置
+
+  更新 input_ids（追加 text_token）
+  更新 audio_buffer（追加最新的 audio codes）
+
+  yield（text tokens so far, audio_frame）
+
+  if text_token == eos: text_finished = True
+  if text_finished and all(audio_stop_pos is not None): break
+
+<span class="hl1">返回 audio_frame 的时机（L387–390）：</span>
+  audio_step >= 7 时（所有 8 层都有输出）
+  frame = [audio_codes[i][step-7+i] for i in range(8)]
+  对齐点：step=7时 frame = [codes[0][0], codes[1][1], ..., codes[7][7]]
+  这 8 个 codes 组合成一帧 Mimi codec，可以实时解码为音频波形</div>
+      <div class="callout key"><strong>1步延迟对齐的关键：</strong>第 0 层音频从 audio_step=0 开始生成（即第 2 个文本 token 生成时）；第 1 层从 audio_step=1 开始；...；第 7 层从 audio_step=7 开始。这样，当 step=7 时，8 层各有 1 个有效 code，恰好凑成一帧。从 step=8 开始，每步都能输出一帧完整的 8 层 codec，实现流式解码。</div>
+      <div class="cards">
+        <div class="card"><h4>思维链模式（open_thinking）L341, 365–368</h4><p>如果开启 open_thinking（CoT 模式），模型先生成 <code>&lt;think&gt;...&lt;/think&gt;</code> 推理过程，在输出 <code>&lt;/think&gt;\n\n</code> 之后才开始音频生成（<code>audio_step</code> 从此刻开始计数）。这意味着思维链内容不会被"说出来"，只在文本里可见。</p></div>
+        <div class="card"><h4>音频 temperature=0.2</h4><p>音频 codec 采样用极低温度（0.2），接近贪婪采样。原因：codec 序列的连续性要求比文字更高——相邻 frame 的 codes 必须连贯，才能解码出自然的语音。高温度会引入随机性，导致音频"卡顿"或"噪声"。</p></div>
+        <div class="card"><h4>text_finished 后的处理 L359–361</h4><p>文本 EOS 后，继续让 audio 生成直到 8 层都输出 stop token（code>=2048）。这时 text_token 强制输出 enter_token（换行），然后是 pad_token，占位但不影响语义。这保证了音频能完整输出完整句子的发音。</p></div>
+        <div class="card"><h4>ref_codes — 音色参考 L332–340</h4><p>在 audio_buffer 里预填入参考音频的 codes，让 Talker 在历史 context 里"看到"目标音色的样本，从而模仿这种音色生成。这是零样本（zero-shot）音色克隆的实现方式，不需要额外的说话人适配训练。</p></div>
+      </div>
+      <div class="callout why"><strong>流式生成中的1步延迟对齐：</strong>当Thinker在t步生成文字token时，Talker从t+1步才开始生成第0层音频码，t+2步生成第1层...这个设计的理由是：在Thinker决定"说什么"后，Talker才开始决定"怎么说"，确保语义先行。</div>
+      <div class="formula">音频码生成时机：audio_codes[layer_i] 在 step = t + layer_i + 1 时生成  →  8层音频在8个连续步骤内逐层生成，而不是同时生成</div>
+      <div class="callout tip"><strong>音频温度=0.2 vs 文本温度=0.75：</strong>音频RVQ码之间有强烈的局部依赖（相邻帧的码差异应该很小），高温度会产生跳跃的不连贯码序列，听起来像噪声。低温度保证了音频的时间平滑性。</div>
+      <div class="callout key"><strong>open_thinking 模式：</strong>Thinker先生成完整的思维链（&lt;think&gt;...文字...&lt;/think&gt;），Talker直到检测到&lt;/think&gt;标记后才开始生成音频。这确保了音频内容基于完整的推理，而不是边想边说。</div>
+      <figure style="margin:20px 0">
+      <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:620px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        <rect width="620" height="260" rx="10" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <text x="310" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2328">stream_generate — 时间步流水线（1步延迟对齐）</text>
+
+        <!-- Time axis -->
+        <text x="20" y="50" font-size="11" font-weight="600" fill="#57606a">时间步 →</text>
+        <line x1="60" y1="44" x2="605" y2="44" stroke="#d0d7de" stroke-width="1"/>
+
+        <!-- Step labels -->
+        <text x="90" y="42" text-anchor="middle" font-size="10" fill="#57606a">t</text>
+        <text x="170" y="42" text-anchor="middle" font-size="10" fill="#57606a">t+1</text>
+        <text x="250" y="42" text-anchor="middle" font-size="10" fill="#57606a">t+2</text>
+        <text x="330" y="42" text-anchor="middle" font-size="10" fill="#57606a">t+3</text>
+        <text x="410" y="42" text-anchor="middle" font-size="10" fill="#57606a">t+4</text>
+        <text x="490" y="42" text-anchor="middle" font-size="10" fill="#57606a">…</text>
+
+        <!-- Row labels -->
+        <text x="20" y="75" font-size="10" fill="#1a7f37">Text</text>
+        <text x="20" y="107" font-size="10" fill="#bc4c00">L0</text>
+        <text x="20" y="135" font-size="10" fill="#bc4c00">L1</text>
+        <text x="20" y="163" font-size="10" fill="#bc4c00">L2</text>
+        <text x="20" y="191" font-size="10" fill="#bc4c00">L3</text>
+        <text x="20" y="219" font-size="10" fill="#bc4c00">…L7</text>
+
+        <!-- Text tokens (green) -->
+        <rect x="60" y="60" width="70" height="22" rx="4" fill="#f0fdf4" stroke="#1a7f37" stroke-width="1.5"/>
+        <text x="95" y="75" text-anchor="middle" font-size="10" font-weight="700" fill="#1a7f37">word_t</text>
+        <rect x="140" y="60" width="70" height="22" rx="4" fill="#f0fdf4" stroke="#1a7f37" stroke-width="1.5"/>
+        <text x="175" y="75" text-anchor="middle" font-size="10" font-weight="700" fill="#1a7f37">word_{t+1}</text>
+        <rect x="220" y="60" width="70" height="22" rx="4" fill="#f0fdf4" stroke="#1a7f37" stroke-width="1.5"/>
+        <text x="255" y="75" text-anchor="middle" font-size="10" fill="#1a7f37">word_{t+2}</text>
+        <rect x="300" y="60" width="70" height="22" rx="4" fill="#f0fdf4" stroke="#1a7f37" stroke-width="1.5"/>
+        <text x="335" y="75" text-anchor="middle" font-size="10" fill="#1a7f37">word_{t+3}</text>
+
+        <!-- L0 audio (starts at t+1, offset 1) -->
+        <rect x="60" y="92" width="70" height="22" rx="4" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="95" y="107" text-anchor="middle" font-size="9" fill="#d0d7de">—</text>
+        <rect x="140" y="92" width="70" height="22" rx="4" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="175" y="107" text-anchor="middle" font-size="10" font-weight="700" fill="#bc4c00">L0_code_0</text>
+        <rect x="220" y="92" width="70" height="22" rx="4" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="255" y="107" text-anchor="middle" font-size="10" fill="#bc4c00">L0_code_1</text>
+        <rect x="300" y="92" width="70" height="22" rx="4" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="335" y="107" text-anchor="middle" font-size="10" fill="#bc4c00">L0_code_2</text>
+
+        <!-- L1 audio (starts at t+2) -->
+        <rect x="60" y="120" width="70" height="22" rx="4" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="95" y="135" text-anchor="middle" font-size="9" fill="#d0d7de">—</text>
+        <rect x="140" y="120" width="70" height="22" rx="4" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="175" y="135" text-anchor="middle" font-size="9" fill="#d0d7de">—</text>
+        <rect x="220" y="120" width="70" height="22" rx="4" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="255" y="135" text-anchor="middle" font-size="10" font-weight="700" fill="#bc4c00">L1_code_0</text>
+        <rect x="300" y="120" width="70" height="22" rx="4" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="335" y="135" text-anchor="middle" font-size="10" fill="#bc4c00">L1_code_1</text>
+
+        <!-- L2 -->
+        <rect x="60" y="148" width="70" height="22" rx="4" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="95" y="163" text-anchor="middle" font-size="9" fill="#d0d7de">—</text>
+        <rect x="140" y="148" width="70" height="22" rx="4" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="175" y="163" text-anchor="middle" font-size="9" fill="#d0d7de">—</text>
+        <rect x="220" y="148" width="70" height="22" rx="4" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="255" y="163" text-anchor="middle" font-size="9" fill="#d0d7de">—</text>
+        <rect x="300" y="148" width="70" height="22" rx="4" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="335" y="163" text-anchor="middle" font-size="10" font-weight="700" fill="#bc4c00">L2_code_0</text>
+
+        <!-- L3 similarly offset -->
+        <rect x="60" y="176" width="230" height="22" rx="4" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="175" y="191" text-anchor="middle" font-size="9" fill="#d0d7de">— — —</text>
+        <rect x="300" y="176" width="70" height="22" rx="4" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="335" y="191" text-anchor="middle" font-size="9" fill="#d0d7de">—</text>
+        <rect x="380" y="176" width="70" height="22" rx="4" fill="#fff7ed" stroke="#bc4c00" stroke-width="1.5"/>
+        <text x="415" y="191" text-anchor="middle" font-size="10" font-weight="700" fill="#bc4c00">L3_code_0</text>
+
+        <!-- diagonal line hint -->
+        <line x1="95" y1="82" x2="174" y2="92" stroke="#bc4c00" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="175" y1="114" x2="254" y2="120" stroke="#bc4c00" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="255" y1="142" x2="334" y2="148" stroke="#bc4c00" stroke-width="1" stroke-dasharray="3,2"/>
+
+        <!-- Mimi frame ready label -->
+        <rect x="380" y="92" width="225" height="110" rx="6" fill="white" stroke="#1a7f37" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="492" y="112" text-anchor="middle" font-size="10" font-weight="700" fill="#1a7f37">首帧音频就绪条件：</text>
+        <text x="492" y="128" text-anchor="middle" font-size="9" fill="#57606a">L0、L1、…、L7 的 code_0</text>
+        <text x="492" y="142" text-anchor="middle" font-size="9" fill="#57606a">全部生成完毕（共需 8 步）</text>
+        <text x="492" y="160" text-anchor="middle" font-size="10" font-weight="700" fill="#bc4c00">→ Mimi decoder 解码</text>
+        <text x="492" y="176" text-anchor="middle" font-size="9" fill="#bc4c00">输出第一个 PCM 帧 ≈ 80ms</text>
+        <text x="492" y="192" text-anchor="middle" font-size="9" fill="#57606a">端到端延迟 ≈ 首 token 生成时间</text>
+
+        <!-- Note -->
+        <text x="310" y="246" text-anchor="middle" font-size="10" fill="#57606a">layer_i 的 audio 在 step = assistant_start + i + 1 才开始生成（1步延迟 + i步偏移）</text>
+      </svg>
+      <figcaption style="text-align:center;font-size:.75rem;color:#57606a;margin-top:4px">流水线对齐：文字和8层音频并行流出，首帧PCM在8步后就绪，无需等待完整回复。</figcaption>
+      </figure>
+
+    </div>
+
+    <div class="lesson-section" id="s10" data-start="398" data-end="461">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">L398–461</span></div>
+      <h2 class="section-title">SileroVAD + RealtimeSession — 实时语音活动检测</h2>
+      <p class="section-lead">这部分和模型本身完全解耦，是纯工程层。SileroVAD 检测用户是否在说话，RealtimeSession 管理说话状态机，实现"用户开口时打断模型回复"的实时交互。</p>
+      <div class="cards">
+        <div class="card"><h4>SileroVAD（L399–412）</h4><p>Silero 是一个轻量的 ONNX 模型，每 1024 个音频样本（64ms at 16kHz）输出一个 [0,1] 概率（是否有语音）。用 ONNX Runtime 在 CPU 上推理，延迟极低（<1ms）。<code>h</code> 和 <code>c</code> 是 GRU 的隐状态，维护时间上的上下文。</p></div>
+        <div class="card"><h4>RealtimeSession 状态机（L415–461）</h4><p>
+          三个状态：<code>listening</code>（等待）、说话中（buffer 中积累）、<code>speech_end</code>（返回完整语音）<br><br>
+          关键参数：<br>
+          <code>threshold=0.8</code>：概率>0.8才算有语音（避免误触发）<br>
+          <code>min_speech_ms=128</code>：至少 128ms 语音才确认说话<br>
+          <code>min_silence_ms=800</code>：静音 800ms 后认为说话结束
+        </p></div>
+        <div class="card"><h4>interrupt 机制 L440–442</h4><p>如果模型正在生成（<code>generating=True</code>），用户开口说话（<code>speaking=True</code>），返回 <code>'interrupt'</code> 信号。上层应用收到后停止模型的 stream_generate，播放器停止播放当前音频，开始处理新的用户输入。这实现了流畅的打断对话体验。</p></div>
+        <div class="card"><h4>ring buffer（回环缓冲）L438–439</h4><p>在用户开始说话前，保留最近 1024 个样本的"预缓冲"（<code>self.ring = [w]</code>）。当 VAD 检测到说话开始时，把 ring 里的历史样本拼到 buffer 前面。这捕获了语音起始的那一小段（因为 VAD 有延迟，start 时刻之前可能已经有语音了）。</p></div>
+      </div>
+      <div class="callout tip"><strong>实际使用方式：</strong>麦克风以 16kHz 采样，每 1024 个样本（64ms）调用一次 <code>push_chunk()</code>。返回 <code>'speech_end'</code> 时，调用 <code>get_audio()</code> 获取完整语音 numpy 数组，送给 SenseVoice 编码，然后送给模型生成回复。返回 <code>'interrupt'</code> 时停止当前生成，重新处理。</div>
+      <div class="callout why"><strong>为什么用VAD（语音活动检测）？</strong>语音助手不能持续监听麦克风，必须知道什么时候有人在说话。Silero VAD是一个仅3MB的ONNX模型，每30ms分析一次音频，输出0-1的说话概率。CPU上实时运行，几乎无延迟。</div>
+      <div class="callout tip"><strong>ring_buffer（环形缓冲）的作用：</strong>保存VAD判定为"有人说话"之前的64ms音频。原因：辅音（s,t,p等）往往出现在单词开头，如果等VAD触发后再开始录音，会错过头部音素。预存64ms确保完整捕获开头。</div>
+      <div class="callout key"><strong>打断检测（interrupt）：</strong>当模型正在生成回答时，如果VAD检测到新的语音输入，RealtimeSession会设置interrupt标志，stream_generate检测到后立即停止当前生成并清空KV Cache，准备处理新的输入。这模拟了真人对话中的打断行为。</div>
+    </div>
+
+    <div class="lesson-section" id="s11" data-start="1" data-end="461">
+      <div class="section-label"><span class="file-badge">model_omni.py</span><span class="lines-badge">全文总结</span></div>
+      <h2 class="section-title">你可以优化的地方</h2>
+      <p class="section-lead">以下是基于对代码深入理解后，有明确理论依据的优化方向，从易到难排列。</p>
+      <div class="cards">
+        <div class="card"><h4>优化 1：更大的投影器</h4><p>
+          <strong>当前</strong>：2层 MLP<br>
+          <strong>改进</strong>：4层 MLP 或 Cross-Attention Projector<br>
+          <strong>效果</strong>：更好的模态对齐，尤其对复杂音频（多说话人、噪音环境）<br>
+          <strong>成本</strong>：增加约 2M 参数，可接受
+        </p></div>
+        <div class="card"><h4>优化 2：更多 Talker 层</h4><p>
+          <strong>当前</strong>：4 层 MiniMindBlock<br>
+          <strong>改进</strong>：8 层（和 Thinker 一样深）<br>
+          <strong>效果</strong>：更自然的语音输出，尤其是语调和节奏<br>
+          <strong>成本</strong>：参数增加约 50M，训练时间增加 30%
+        </p></div>
+        <div class="card"><h4>优化 3：独立的音频 KV Cache</h4><p>
+          <strong>当前</strong>：Thinker+Talker 的 KV Cache 混合存储<br>
+          <strong>改进</strong>：分开管理，支持只更新部分<br>
+          <strong>效果</strong>：推理时更灵活，比如可以只重新计算 Talker 部分（换音色时）<br>
+          <strong>成本</strong>：需要改 forward() 接口
+        </p></div>
+        <div class="card"><h4>优化 4：更大的 bridge 层信息</h4><p>
+          <strong>当前</strong>：bridge_layer = 3（第3层）<br>
+          <strong>改进</strong>：把多个层的 hidden_states 加权融合给 Talker<br>
+          <strong>效果</strong>：Talker 同时看到浅层（音素）和深层（语义）信息，生成更自然<br>
+          <strong>成本</strong>：需要改 TalkerModule 接收多个 bridge 状态
+        </p></div>
+        <div class="card"><h4>优化 5：真实 RIR 数据增强</h4><p>
+          <strong>当前</strong>：随机指数衰减 IR 模拟混响<br>
+          <strong>改进</strong>：用真实室内冲激响应数据集（MIT IR Survey, BUT ReverbDB）<br>
+          <strong>效果</strong>：更真实的混响场景，提升嘈杂环境下的识别准确率<br>
+          <strong>成本</strong>：下载数据集（约 2GB），改 augment_wav
+        </p></div>
+        <div class="card"><h4>优化 6：Streaming Codec Decoding</h4><p>
+          <strong>当前</strong>：stream_generate 返回 codes，需要外部解码<br>
+          <strong>改进</strong>：集成 Mimi 解码器，直接输出 PCM 音频波形<br>
+          <strong>效果</strong>：端到端的流式 TTS，减少额外的解码延迟<br>
+          <strong>成本</strong>：需要在 Python 环境安装 moshi 包
+        </p></div>
+      </div>
+      <div class="callout key"><strong>更多优化方向：</strong><br>
+        <strong>MLA（多头潜在注意力，DeepSeek-V2）</strong>：把K和V通过低秩矩阵压缩（d_head×num_heads → d_latent），KV Cache 减少 4-8×，同时质量损失极小。MiniMind可以用类似方式将KV Cache从 2×8×seq×64 降到 2×8×seq×16。<br><br>
+        <strong>投机解码（Speculative Decoding）</strong>：用小模型（如MiniMind-Nano）预测未来4个token，再用大模型一次验证。接受则快4倍，拒绝则回退。对音频生成尤其有效，因为相邻帧高度相似。<br><br>
+        <strong>MoD（Mixture of Depths）</strong>：某些token（如填充词、标点）不需要深层处理，可以路由跳过某些Block。预计节省20-30%计算量，质量几乎无损。
+      </div>
+    </div>
+
+    <div class="section-nav">
+      <a href="ch2-training.html">← 第二章：训练流水线</a>
+      <a href="ch4-guide.html">下一章：训练你自己的 0.1B →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ FULL SOURCE ============
+const CODE = `import os, math, torch, soundfile as sf, librosa, warnings, numpy as np, onnxruntime as ort, logging, contextlib, io
+from types import SimpleNamespace
+from torch import nn
+from torch.nn import functional as F
+from transformers.modeling_outputs import MoeCausalLMOutputWithPast
+from transformers import SiglipImageProcessor, SiglipVisionModel, logging as hf_logging
+from .model_minimind import *
+
+
+class OmniConfig(MiniMindConfig):
+    model_type = "minimind-o"
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.num_talker_hidden_layers = kwargs.get("num_talker_hidden_layers", 4)
+        self.talker_hidden_size = kwargs.get("talker_hidden_size", 768)
+        self.audio_ids = kwargs.get("audio_ids", [16]) # "<|audio_pad|>" token id
+        self.audio_special_token = kwargs.get("audio_special_token", "<|audio_pad|>")
+        self.audio_hidden_size = kwargs.get("audio_hidden_size", 512)
+        self.audio_vocab_size = kwargs.get("audio_vocab_size", 2112)
+        self.audio_pad_token = kwargs.get("audio_pad_token", 2049)
+        self.audio_stop_token = kwargs.get("audio_stop_token", 2050)
+        self.audio_spk_token = kwargs.get("audio_spk_token", 2051)
+        self.spk_emb_size = kwargs.get("spk_emb_size", 192)
+        self.think_end_ids = kwargs.get("think_end_ids", [26, 234, 234])
+        self.image_ids = kwargs.get("image_ids", [12]) # "<|image_pad|>" token id
+        self.image_special_token = kwargs.get("image_special_token", "<|image_pad|>")
+        self.image_hidden_size = kwargs.get("image_hidden_size", 768)
+        self.image_token_len = kwargs.get("image_token_len", 64)
+        self.bridge_layer = kwargs.get("bridge_layer", self.num_hidden_layers // 2 - 1)
+
+class MMAudioProjector(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.mlp = nn.Sequential(
+            nn.LayerNorm(in_dim),
+            nn.Linear(in_dim, out_dim),
+            nn.GELU(),
+            nn.Linear(out_dim, out_dim),
+        )
+    def forward(self, x):
+        return self.mlp(x)
+
+
+class MMVisionProjector(nn.Module):
+    def __init__(self, in_dim, out_dim, source_tokens=64, target_tokens=64):
+        super().__init__()
+        self.mlp = nn.Sequential(
+            nn.LayerNorm(in_dim),
+            nn.Linear(in_dim, out_dim),
+            nn.GELU(),
+            nn.Linear(out_dim, out_dim),
+        )
+    def forward(self, x):
+        return self.mlp(x)
+
+
+class TalkerHead(nn.Module):
+    def __init__(self, in_features, out_features, num_layers=8, rank=256):
+        super().__init__()
+        self.num_layers = num_layers
+        self.base = nn.Linear(in_features, out_features, bias=False)
+        self.adapters = nn.ModuleList([
+            nn.Sequential(nn.Linear(in_features, rank, bias=False), nn.GELU(), nn.Linear(rank, out_features, bias=False))
+            for _ in range(num_layers)])
+    def forward(self, x):
+        base_out = self.base(x)
+        return [base_out + adapter(x) for adapter in self.adapters]
+
+
+class TalkerEmbedding(nn.Module):
+    def __init__(self, num_embeddings, embedding_dim, num_layers=8, rank=256):
+        super().__init__()
+        self.num_layers = num_layers
+        self.base = nn.Embedding(num_embeddings, embedding_dim)
+        self.adapters = nn.ModuleList([
+            nn.Sequential(nn.Embedding(num_embeddings, rank), nn.GELU(), nn.Linear(rank, embedding_dim, bias=False))
+            for _ in range(num_layers)])
+    def forward(self, x):
+        base_out = self.base(x)
+        return sum(base_out[:, i, :] + self.adapters[i](x[:, i, :]) for i in range(len(self.adapters))) / self.num_layers
+
+class SenseVoiceAudioProcessor:
+    def __init__(self, frontend): self.frontend = frontend
+    def __call__(self, wav, sampling_rate=16000, return_tensors="pt", return_attention_mask=True, **kwargs):
+        if isinstance(wav, np.ndarray): wav = torch.from_numpy(wav).float()
+        if wav.dim() == 1: wav = wav.unsqueeze(0)
+        with torch.no_grad():
+            fbank, flen = self.frontend(wav, torch.tensor([wav.size(1)]))
+        return SimpleNamespace(input_features=fbank, attention_mask=(torch.arange(fbank.size(1)) < flen[0]).long().unsqueeze(0))
+
+
+class TalkerModule(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.talker_config = MiniMindConfig(hidden_size=config.talker_hidden_size, use_moe=config.use_moe)
+        self.layers = nn.ModuleList([MiniMindBlock(l, self.talker_config) for l in range(config.num_talker_hidden_layers)])
+        self.norm = RMSNorm(config.talker_hidden_size, eps=config.rms_norm_eps)
+        self.lm_head = TalkerHead(config.talker_hidden_size, config.audio_vocab_size)
+        self.embed_tokens = TalkerEmbedding(config.audio_vocab_size, config.talker_hidden_size)
+        self.codec_proj = nn.Sequential(
+            nn.Linear(config.talker_hidden_size, config.talker_hidden_size), nn.GELU(),
+            nn.Linear(config.talker_hidden_size, config.talker_hidden_size),
+            RMSNorm(config.talker_hidden_size, eps=config.rms_norm_eps))
+        self.embed_proj = nn.Sequential(
+            nn.Linear(config.hidden_size, config.hidden_size), nn.GELU(),
+            nn.Linear(config.hidden_size, config.talker_hidden_size),
+            RMSNorm(config.talker_hidden_size, eps=config.rms_norm_eps))
+        self.text_scale, self.audio_scale = nn.Parameter(torch.tensor(3.0)), nn.Parameter(torch.tensor(1.0))
+        self.spk_proj = nn.Linear(config.spk_emb_size, config.talker_hidden_size, bias=False)
+        freqs_cos, freqs_sin = precompute_freqs_cis(dim=self.talker_config.head_dim, end=config.max_position_embeddings,
+                                                     rope_base=config.rope_theta, rope_scaling=config.rope_scaling)
+        self.register_buffer("freqs_cos", freqs_cos, persistent=False)
+        self.register_buffer("freqs_sin", freqs_sin, persistent=False)
+
+
+class MiniMindOmni(MiniMindForCausalLM):
+    config_class = OmniConfig
+    def __init__(self, config: OmniConfig = None, audio_encoder_path="./model/SenseVoiceSmall",
+                 vision_model_path="./model/siglip2-base-p32-256-ve"):
+        config = config or OmniConfig()
+        super().__init__(config)
+        object.__setattr__(self, 'thinker', self.model)  # alias: self.thinker == self.model
+        object.__setattr__(self.model, 'lm_head', self.lm_head)
+        self.talker = TalkerModule(config)
+        self.audio_proj = MMAudioProjector(config.audio_hidden_size, config.hidden_size)
+        self.vision_proj = MMVisionProjector(config.image_hidden_size, config.hidden_size, target_tokens=config.image_token_len)
+        self.audio_pad_token, self.audio_stop_token, self.audio_spk_token = config.audio_pad_token, config.audio_stop_token, config.audio_spk_token
+        audio_encoder, audio_processor = self.load_sensevoice(audio_encoder_path)
+        object.__setattr__(self, 'audio_encoder', audio_encoder)
+        object.__setattr__(self, 'audio_processor', audio_processor)
+        vision_encoder, vision_processor = self.load_vision(vision_model_path)
+        object.__setattr__(self, 'vision_encoder', vision_encoder)
+        object.__setattr__(self, 'vision_processor', vision_processor)
+
+    @staticmethod
+    def load_sensevoice(path):
+        if not os.path.exists(path):
+            warnings.warn(f"[MiniMindOmni] SenseVoice path not found: {path}")
+            return None, None
+        logging.getLogger().setLevel(logging.ERROR)
+        hf_logging.set_verbosity_error()
+        with contextlib.redirect_stdout(io.StringIO()):
+            from funasr import AutoModel
+            m = AutoModel(model=path, trust_remote_code=True, disable_update=True, device="cpu")
+        encoder, frontend = m.model.encoder, m.kwargs["frontend"]
+        for p in encoder.parameters(): p.requires_grad = False
+        return encoder.eval().float(), SenseVoiceAudioProcessor(frontend.eval())
+
+    @torch.compiler.disable
+    def encode_audio_inputs(self, audio_inputs, audio_lens=None):
+        if (audio_inputs is None) or (self.audio_encoder is None) or (not audio_inputs.any()): return None
+        batch_mask = audio_inputs.flatten(1).any(1)
+        enc_dtype = next(self.audio_encoder.parameters()).dtype
+        valid_fbank = audio_inputs[batch_mask].to(dtype=enc_dtype)
+        if audio_lens is not None:
+            valid_lens = audio_lens[batch_mask].to(valid_fbank.device)
+        else:
+            valid_lens = torch.tensor([valid_fbank.size(1)] * valid_fbank.size(0), device=valid_fbank.device)
+        with torch.no_grad():
+            emb, _ = self.audio_encoder(valid_fbank, valid_lens)
+        proj_dtype = next(self.audio_proj.parameters()).dtype
+        emb_list = [self.audio_proj(emb[i, :max(1, min(valid_lens[i].item(), emb.size(1)))].unsqueeze(0).to(proj_dtype)).squeeze(0)
+                    for i in range(emb.size(0))]
+        if batch_mask.all(): return emb_list
+        out = [None] * audio_inputs.size(0)
+        j = 0
+        for i in range(audio_inputs.size(0)):
+            if batch_mask[i]:
+                out[i] = emb_list[j]; j += 1
+        return out
+
+    @torch.compiler.disable
+    def inject_audio_features(self, tokens, h, audio_feats, seqlen):
+        if audio_feats is None or not self.config.audio_ids:
+            return h
+        marker = self.config.audio_ids[0]
+        out = []
+        for b in range(h.size(0)):
+            hb, seq, i = h[b], tokens[b].tolist(), 0
+            af = audio_feats[b] if audio_feats[b] is not None else None
+            while i < len(seq):
+                if seq[i] == marker:
+                    start = i
+                    while i < len(seq) and seq[i] == marker:
+                        i += 1
+                    if af is not None:
+                        inject_len = min(af.size(0), i - start)
+                        hb = torch.cat((hb[:start], af[:inject_len], hb[start + inject_len:]), dim=0)
+                        af = None
+                else:
+                    i += 1
+            out.append(hb)
+        return torch.stack(out)
+
+    @staticmethod
+    def load_vision(path):
+        if path is None or not os.path.exists(path):
+            warnings.warn(f"[MiniMindOmni] Vision model path not found: {path}. vision_encoder will be None!")
+            return None, None
+        hf_logging.set_verbosity_error()
+        try:
+            model = SiglipVisionModel.from_pretrained(path)
+        except (RuntimeError, ValueError):
+            return None, None
+        processor = SiglipImageProcessor.from_pretrained(path)
+        for p in model.parameters():
+            p.requires_grad = False
+        return model.eval(), processor
+
+    @torch.compiler.disable
+    def get_image_embeddings(self, image_inputs):
+        if hasattr(image_inputs, 'keys'):
+            image_inputs = {k: v.squeeze(1) if v.ndim > 2 and v.shape[1] == 1 else v for k, v in image_inputs.items()}
+            pixel_attention_mask = image_inputs.get('pixel_attention_mask')
+            if pixel_attention_mask is not None and not pixel_attention_mask.any():
+                pv = image_inputs['pixel_values']
+                return pv.new_zeros(pv.size(0), pv.size(1), self.config.image_hidden_size)
+        with torch.no_grad():
+            outputs = self.vision_encoder(**image_inputs)
+        return outputs.last_hidden_state
+
+    @torch.compiler.disable
+    def encode_image_inputs(self, pixel_values):
+        if pixel_values is None or self.vision_encoder is None: return None
+        mask = pixel_values.flatten(1).any(1)
+        if not mask.any(): return pixel_values.new_zeros(pixel_values.size(0), self.config.image_token_len, self.config.hidden_size)
+        with torch.no_grad(): emb = self.vision_encoder(pixel_values=pixel_values[mask]).last_hidden_state
+        if emb.dim() == 2: emb = emb.unsqueeze(0)
+        emb = self.vision_proj(emb)
+        if mask.all(): return emb
+        idx = mask.nonzero().view(-1, 1, 1).expand_as(emb)
+        return emb.new_zeros(pixel_values.size(0), *emb.shape[1:]).scatter(0, idx, emb)
+
+    @torch.compiler.disable
+    def count_vision_proj(self, tokens, h, vision_tensors=None, seqlen=512):
+        if vision_tensors is None or not self.config.image_ids:
+            return h
+        marker, vf = self.config.image_ids[0], vision_tensors
+        if vf.dim() == 3: vf = vf.unsqueeze(1)
+        out = []
+        for b in range(h.size(0)):
+            hb, seq, k, i = h[b], tokens[b].tolist(), 0, 0
+            while i < len(seq):
+                if seq[i] == marker:
+                    start = i
+                    while i < len(seq) and seq[i] == marker:
+                        i += 1
+                    if k < vf.size(1):
+                        hb = torch.cat((hb[:start], vf[b][k][:i - start], hb[i:]), dim=0)[:seqlen]
+                        k += 1
+                else:
+                    i += 1
+            out.append(hb)
+        return torch.stack(out)
+
+    def forward(self, input_ids, attention_mask=None, past_key_values=None, use_cache=False,
+                logits_to_keep=0, audio_inputs=None, audio_lens=None, pixel_values=None, **args):
+        if len(input_ids.shape) == 2:
+            batch_size, seq_length = input_ids.shape
+            text_ids = input_ids
+            audio_ids = torch.full((batch_size, 8, seq_length), self.audio_pad_token, dtype=torch.long, device=input_ids.device)
+        else:
+            batch_size, _, seq_length = input_ids.shape
+            text_ids, audio_ids = input_ids[:, 8, :], input_ids[:, :8, :]
+        if hasattr(past_key_values, 'layers'): past_key_values = None
+        n_thinker, n_talker = len(self.thinker.layers), len(self.talker.layers)
+        past_key_values = past_key_values or ([None] * (n_thinker + n_talker))
+        start_pos = past_key_values[0][0].shape[1] if past_key_values[0] is not None else 0
+        if self.thinker.freqs_cos[0, 0] == 0:
+            freqs_cos, freqs_sin = precompute_freqs_cis(dim=self.config.head_dim, end=self.config.max_position_embeddings, rope_base=self.config.rope_theta, rope_scaling=self.config.rope_scaling)
+            self.thinker.freqs_cos, self.thinker.freqs_sin = freqs_cos.to(input_ids.device), freqs_sin.to(input_ids.device)
+        if self.talker.freqs_cos[0, 0] == 0:
+            freqs_cos, freqs_sin = precompute_freqs_cis(dim=self.talker.talker_config.head_dim, end=self.config.max_position_embeddings, rope_base=self.config.rope_theta, rope_scaling=self.config.rope_scaling)
+            self.talker.freqs_cos, self.talker.freqs_sin = freqs_cos.to(input_ids.device), freqs_sin.to(input_ids.device)
+        presents = []
+
+        # ======= Thinker: text input, output text logits =======
+        hidden_states = self.thinker.dropout(self.thinker.embed_tokens(text_ids))
+        position_embeddings = (self.thinker.freqs_cos[start_pos:start_pos + seq_length], self.thinker.freqs_sin[start_pos:start_pos + seq_length])
+        if audio_inputs is not None and start_pos == 0:
+            audio_features = self.encode_audio_inputs(audio_inputs, audio_lens)
+            hidden_states = self.inject_audio_features(text_ids, hidden_states, audio_features, seq_length)
+        if pixel_values is not None and start_pos == 0:
+            if hasattr(pixel_values, 'keys'):
+                img_emb = self.get_image_embeddings(pixel_values).to(hidden_states.dtype)
+                vision_tensors = self.vision_proj(img_emb)
+            else:
+                if len(pixel_values.shape) == 6: pixel_values = pixel_values.squeeze(2)
+                if len(pixel_values.shape) == 4: pixel_values = pixel_values.unsqueeze(1)
+                bs, num, c, im_h, im_w = pixel_values.shape
+                stack_dim = 1 if bs > 1 else 0
+                vision_tensors = torch.stack([self.encode_image_inputs(pixel_values[:, i, :, :, :]) for i in range(num)], dim=stack_dim)
+            hidden_states = self.count_vision_proj(tokens=text_ids, h=hidden_states, vision_tensors=vision_tensors, seqlen=seq_length)
+        bridge_states = hidden_states
+        for i, (layer, past_key_value) in enumerate(zip(self.thinker.layers, past_key_values[:n_thinker])):
+            hidden_states, present = layer(hidden_states, position_embeddings, past_key_value=past_key_value, use_cache=use_cache, attention_mask=attention_mask)
+            presents.append(present)
+            if i == self.config.bridge_layer: bridge_states = hidden_states
+        h_thinker = self.thinker.norm(hidden_states)
+
+        # ======= Talker: bridge hidden + audio codes, output audio logits =======
+        talker_emb = self.talker.embed_tokens(audio_ids)
+        spk_emb = args.get('spk_emb', None)
+        if spk_emb is not None:
+            spk_mask = (audio_ids[:, 0, :] == self.audio_spk_token).unsqueeze(-1)
+            talker_emb = torch.where(spk_mask, self.talker.spk_proj(spk_emb).unsqueeze(1), talker_emb)
+        hidden_states = self.talker.embed_proj(bridge_states) * self.talker.text_scale + self.talker.codec_proj(talker_emb) * self.talker.audio_scale
+        talker_pos_emb = (self.talker.freqs_cos[start_pos:start_pos + seq_length], self.talker.freqs_sin[start_pos:start_pos + seq_length])
+        for layer, past_key_value in zip(self.talker.layers, past_key_values[n_thinker:]):
+            hidden_states, present = layer(hidden_states, talker_pos_emb, past_key_value=past_key_value, use_cache=use_cache, attention_mask=attention_mask)
+            presents.append(present)
+        h_talker = self.talker.norm(hidden_states)
+
+        slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
+        aux_loss = sum(l.mlp.aux_loss for l in list(self.thinker.layers) + list(self.talker.layers) if isinstance(l.mlp, MOEFeedForward))
+        aux_loss += sum(p.sum() for p in self.audio_proj.parameters()) * 0 + sum(p.sum() for p in self.vision_proj.parameters()) * 0 + sum(p.sum() for p in self.talker.lm_head.adapters.parameters()) * 0 + sum(p.sum() for p in self.talker.spk_proj.parameters()) * 0
+        text_logits = self.thinker.lm_head(h_thinker[:, slice_indices, :])
+        audio_logits = self.talker.lm_head(h_talker[:, slice_indices, :])
+
+        out = MoeCausalLMOutputWithPast(aux_loss=aux_loss, logits=text_logits, past_key_values=presents)
+        out.audio_logits = audio_logits
+        return out
+
+    @torch.inference_mode()
+    def generate(self, input_ids, eos_token_id=2, max_new_tokens=1024, temperature=0.75, top_p=0.90,
+                 stream=False, rp=1., use_cache=True, return_audio_codes=False, **args):
+        if stream:
+            return self.stream_generate(input_ids, eos_token_id, max_new_tokens, temperature, top_p, rp, use_cache, return_audio_codes, **args)
+        tokens = list(self.stream_generate(input_ids, eos_token_id, max_new_tokens, temperature, top_p, rp, use_cache, return_audio_codes, **args))
+        return tokens[-1] if tokens else input_ids
+
+    def stream_generate(self, input_ids, eos_token_id, max_new_tokens, temperature, top_p, rp, use_cache, return_audio_codes=False, **args):
+        start_pos, past_kvs, text_finished, first_finished = input_ids.shape[1], None, False, True
+        audio_codes = [[] for _ in range(8)]
+        audio_stop_pos = [None] * 8
+        audio_buffer = torch.full((1, 8, start_pos), self.audio_pad_token, dtype=torch.long, device=input_ids.device)
+        spk_emb = args.get('spk_emb', None)
+        ref_codes = args.get('ref_codes', None)
+        ref_len = ref_codes.shape[2] if ref_codes is not None else 0
+        spk_reserve = 1 if spk_emb is not None else 0
+        fill_end = start_pos
+        fill_start = max(spk_reserve, start_pos - ref_len)
+        if ref_codes is not None and fill_start < fill_end:
+            audio_buffer[:, :, fill_start:fill_end] = ref_codes[:, :, -(fill_end - fill_start):]
+        if spk_emb is not None and fill_start > 0:
+            audio_buffer[:, :, fill_start - 1] = self.audio_spk_token
+        think_end_step, generated_tokens = None, ([] if args.get('open_thinking', False) else None)
+        while input_ids.shape[1] < start_pos + max_new_tokens:
+            if past_kvs is None or not use_cache:
+                out = self.forward(torch.cat((audio_buffer, input_ids.unsqueeze(1)), dim=1), past_key_values=past_kvs, use_cache=use_cache, **args)
+            else:
+                out = self.forward(torch.cat((audio_buffer[:, :, -1:], input_ids[:, -1:].unsqueeze(1)), dim=1), past_key_values=past_kvs, use_cache=use_cache, **args)
+            past_kvs = out.past_key_values
+
+            logits = out.logits[0, -1, :].clone() / (temperature + 1e-9)
+            if rp != 1.0:
+                seen = list(set(input_ids[0].tolist())); score = logits[seen]; logits[seen] = torch.where(score > 0, score / rp, score * rp)
+            if top_p and top_p < 1.0:
+                sorted_l, sorted_i = torch.sort(logits, descending=True)
+                mask = torch.cumsum(F.softmax(sorted_l, dim=-1), dim=-1) > top_p
+                mask[1:], mask[0] = mask[:-1].clone(), False
+                logits[sorted_i[mask]] = -float('Inf')
+            text_token = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
+
+            if text_finished:
+                text_token = args.get('enter_token_id', 201) if first_finished else args.get('pad_token_id', 0)
+                first_finished = False
+
+            step = input_ids.shape[1] - start_pos
+            audio_step = step - 1  # 延迟1步
+            if generated_tokens is not None:
+                generated_tokens.append(text_token)
+                if not think_end_step and generated_tokens[-len(self.config.think_end_ids):] == list(self.config.think_end_ids):
+                    think_end_step = step + 2
+                audio_step = (step - think_end_step) if think_end_step else -1
+            for i, al in enumerate(out.audio_logits):
+                if audio_step < i:
+                    audio_codes[i].append(self.audio_pad_token)
+                else:
+                    logits_i = al[0, -1, :].clone() / 0.2
+                    for prev_code in audio_codes[i][-3:]:
+                        score = logits_i[prev_code]; logits_i[prev_code] = torch.where(score > 0, score / 1.05, score * 1.05)
+                    top_val, top_idx = logits_i.topk(50)
+                    code = top_idx[torch.multinomial(F.softmax(top_val, dim=-1), 1)].item()
+                    audio_codes[i].append(code)
+                    if audio_stop_pos[i] is None and code >= 2048: audio_stop_pos[i] = len(audio_codes[i]) - 1
+
+            if text_finished and all(audio_stop_pos[i] is not None for i in range(8)): break
+
+            input_ids = torch.cat((input_ids, torch.tensor([[text_token]], device=input_ids.device)), dim=1)
+            audio_buffer = torch.cat((audio_buffer, torch.full((1, 8, 1), self.audio_pad_token, dtype=torch.long, device=input_ids.device)), dim=2)
+            for i in range(min(audio_step + 1, 8)): audio_buffer[0, i, -1] = audio_codes[i][-1]
+
+            audio_frame = None
+            if return_audio_codes and audio_step >= 7:
+                frame = [audio_codes[i][step - 7 + i] for i in range(8)]
+                active_layers = sum(1 for i in range(8) if audio_stop_pos[i] is None or step - 7 + i < audio_stop_pos[i])
+                if active_layers >= 8: audio_frame = frame
+            if not text_finished:
+                yield input_ids[:, start_pos:], audio_frame
+                if text_token == eos_token_id: text_finished = True
+            else:
+                yield None, audio_frame
+
+
+# ==== Realtime VAD ====
+class SileroVAD:
+    def __init__(self, path):
+        opts = ort.SessionOptions()
+        opts.inter_op_num_threads = opts.intra_op_num_threads = 1
+        opts.log_severity_level = 4
+        self.session = ort.InferenceSession(path, providers=["CPUExecutionProvider"], sess_options=opts)
+        self.h, self.c = np.zeros((2, 1, 64), dtype=np.float32), np.zeros((2, 1, 64), dtype=np.float32)
+
+    def reset(self):
+        self.h[:], self.c[:] = 0, 0
+
+    def __call__(self, chunk, sr=16000):
+        out, self.h, self.c = self.session.run(None, {"input": chunk.reshape(1, -1).astype(np.float32), "h": self.h, "c": self.c, "sr": np.array(sr, dtype="int64")})
+        return float(out[0][0])
+
+
+class RealtimeSession:
+    def __init__(self, vad_path, sr=16000, threshold=0.8, min_speech_ms=128, min_silence_ms=800):
+        self.vad, self.sr, self.threshold = SileroVAD(vad_path), sr, threshold
+        self.min_speech, self.min_silence = int(sr * min_speech_ms / 1000), int(sr * min_silence_ms / 1000)
+        self.reset()
+
+    def reset(self):
+        self.vad.reset()
+        self.buffer, self.ring, self.speaking, self.generating, self.interrupt = [], [], False, False, False
+        self.speech_samples = self.silence_samples = self.tail_silence = 0
+
+    def push_chunk(self, chunk, W=1024):
+        for i in range(0, max(len(chunk), 1), W):
+            w = chunk[i:i + W]
+            if len(w) < W:
+                w = np.pad(w, (0, W - len(w)))
+            prob = self.vad(w, self.sr)
+            if prob > self.threshold:
+                self.silence_samples = self.tail_silence = 0
+                self.speech_samples += len(w)
+                self.buffer.append(w)
+                if self.speech_samples >= self.min_speech and not self.speaking:
+                    self.speaking = True
+                    self.buffer = self.ring + self.buffer
+                    self.ring = []
+                if self.generating and self.speaking:
+                    self.interrupt = True
+                    return 'interrupt'
+            elif self.speaking:
+                self.silence_samples += len(w)
+                self.tail_silence += 1
+                self.buffer.append(w)
+                if self.silence_samples >= self.min_silence:
+                    if self.tail_silence > 1:
+                        del self.buffer[-(self.tail_silence - 1):]
+                    self.speaking, self.speech_samples, self.silence_samples, self.tail_silence = False, 0, 0, 0
+                    return 'speech_end'
+            else:
+                if self.speech_samples > 0:
+                    self.buffer.clear()
+                self.speech_samples = 0
+                self.ring = [w]
+        return 'listening'
+
+    def get_audio(self):
+        audio = np.concatenate(self.buffer) if self.buffer else np.array([], dtype=np.float32)
+        self.buffer.clear()
+        return audio`;
+
+// TOC
+const TOC = [
+  {id:'s0', label:'多模态系统总览', start:1, end:9},
+  {id:'s1', label:'OmniConfig', start:10, end:30},
+  {id:'s2', label:'投影器 Projector', start:31, end:55},
+  {id:'s3', label:'TalkerHead + Embedding', start:57, end:77},
+  {id:'s4', label:'TalkerModule', start:88, end:102},
+  {id:'s5', label:'MiniMindOmni 初始化', start:105, end:135},
+  {id:'s6', label:'音频编码+注入', start:137, end:181},
+  {id:'s7', label:'视觉编码+注入', start:183, end:243},
+  {id:'s8', label:'forward() 双头前向', start:245, end:316},
+  {id:'s9', label:'stream_generate()', start:318, end:395},
+  {id:'s10', label:'SileroVAD + RealtimeSession', start:398, end:461},
+  {id:'s11', label:'优化方向总结', start:1, end:461},
+];
+
+function highlight(raw) {
+  const phs = {}; let pid = 0;
+  function ph(str, cls) { const k='\x01'+pid+'\x01'; pid++; phs[k]='<span class="'+cls+'">'+str+'</span>'; return k; }
+  raw = raw.replace(/("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
+    m => ph(m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),'str'));
+  raw = raw.replace(/(#[^\n]*)/g,
+    m => ph(m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),'cmt'));
+  raw = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  raw = raw.replace(/@([A-Za-z_.]+)/g,(_,n)=>'<span class="dec">@'+n+'</span>');
+  raw = raw.replace(/\b(def|class|import|from|return|if|else|elif|for|while|with|as|not|in|and|or|True|False|None|pass|break|continue|raise|try|except|finally|lambda|yield|global|nonlocal|super)\b/g,'<span class="kw">$1</span>');
+  raw = raw.replace(/\b(self)\b/g,'<span class="slf">self</span>');
+  raw = raw.replace(/\b(print|len|range|zip|enumerate|list|dict|set|tuple|int|float|str|bool|sum|max|min|hasattr|isinstance|getattr|setattr|type|repr|next|iter|any|all)\b/g,'<span class="blt">$1</span>');
+  raw = raw.replace(/\b([A-Z][A-Za-z0-9_]+)\b/g,'<span class="cls">$1</span>');
+  raw = raw.replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g,'<span class="num">$1</span>');
+  for(const [k,v] of Object.entries(phs)) raw = raw.split(k).join(v);
+  return raw;
+}
+
+const lines = CODE.split('\n');
+const tbody = document.getElementById('codeBody');
+lines.forEach((line, i) => {
+  const tr = document.createElement('tr');
+  tr.id = 'L'+(i+1);
+  tr.innerHTML = `<td class="ln">${i+1}</td><td class="lc">${highlight(line)||' '}</td>`;
+  tbody.appendChild(tr);
+});
+
+const tocEl = document.getElementById('toc');
+TOC.forEach(item => {
+  const a = document.createElement('a');
+  a.className = 'toc-item';
+  a.textContent = item.label;
+  a.dataset.id = item.id;
+  a.onclick = () => document.getElementById(item.id).scrollIntoView({behavior:'smooth'});
+  tocEl.appendChild(a);
+});
+
+let currentHL = null;
+function activateLines(start, end) {
+  const key = start+'_'+end;
+  if(currentHL===key) return;
+  currentHL=key;
+  document.querySelectorAll('.code-table tr.hl-active').forEach(r=>r.classList.remove('hl-active'));
+  for(let i=start; i<=end && i<=lines.length; i++) {
+    const row = document.getElementById('L'+i);
+    if(row) row.classList.add('hl-active');
+  }
+  const target = document.getElementById('L'+start);
+  if(target) {
+    const panel = document.getElementById('codePanel');
+    panel.scrollTo({top: Math.max(0, target.offsetTop - panel.clientHeight*0.25), behavior:'smooth'});
+  }
+  document.getElementById('lineInfo').textContent = 'L'+start+' – '+end;
+}
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting && entry.intersectionRatio > 0.1) {
+      entry.target.classList.add('in-view');
+      activateLines(parseInt(entry.target.dataset.start), parseInt(entry.target.dataset.end));
+      document.querySelectorAll('.toc-item').forEach(a=>a.classList.remove('active'));
+      const ti = tocEl.querySelector('[data-id="'+entry.target.id+'"]');
+      if(ti) ti.classList.add('active');
+    } else {
+      entry.target.classList.remove('in-view');
+      const key = parseInt(entry.target.dataset.start)+'-'+parseInt(entry.target.dataset.end);
+      if(currentHL === key) {
+        document.querySelectorAll('.code-table tr.hl-active').forEach(r=>r.classList.remove('hl-active'));
+        currentHL = null;
+      }
+    }
+  });
+}, {root: document.getElementById('lessonPanel'), threshold:[0.1,0.3]});
+
+document.querySelectorAll('.lesson-section').forEach(s=>observer.observe(s));
+activateLines(1,9);
+</script>
+</body>
+</html>

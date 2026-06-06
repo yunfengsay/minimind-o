@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第一章：核心架构 · MiniMind-O</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f6f8fa;--bg3:#eef1f4;--border:#d0d7de;
+  --text:#1f2328;--dim:#57606a;
+  --blue:#0969da;--green:#1a7f37;--yellow:#9a6700;--orange:#bc4c00;
+  --purple:#8250df;--red:#cf222e;--teal:#116329;--cyan:#0550ae;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;flex-direction:column}
+
+/* NAV */
+nav{height:46px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;z-index:100}
+nav a{font-size:.78rem;color:var(--dim);padding:4px 8px;border-radius:5px;transition:background .15s,color .15s}
+nav a:hover{background:var(--bg3);color:var(--text)}
+nav a.active{background:var(--bg3);color:var(--blue)}
+nav a:first-child{color:var(--dim);font-size:.75rem}
+.nav-sep{color:var(--border)}
+.nav-title{font-size:.82rem;font-weight:600;color:var(--text);margin-right:auto}
+
+/* SPLIT LAYOUT */
+.split{display:flex;flex:1;overflow:hidden}
+
+/* LEFT: CODE PANEL */
+.code-panel{
+  width:46%;flex-shrink:0;
+  background:#f8f9fa;border-right:1px solid var(--border);
+  overflow-y:scroll;overflow-x:auto;
+  font-family:'SF Mono',Consolas,'Courier New',monospace;
+  font-size:.76rem;line-height:1.65;
+  position:relative;
+}
+.code-panel-header{
+  position:sticky;top:0;background:#f8f9fa;
+  border-bottom:1px solid var(--border);
+  padding:8px 16px;font-size:.72rem;color:var(--dim);
+  display:flex;justify-content:space-between;z-index:10;
+}
+.code-panel-header .fname{color:var(--cyan)}
+.code-table{width:100%;border-collapse:collapse}
+.code-table tr{transition:background .1s}
+.code-table tr.hl-active{background:rgba(9,105,218,.08);border-left:2px solid var(--blue)}
+.code-table tr.hl-active td.ln{color:var(--blue)}
+.ln{
+  width:42px;min-width:42px;text-align:right;padding:0 12px 0 8px;
+  color:#8c959f;user-select:none;vertical-align:top;
+}
+.lc{padding:0 16px 0 4px;white-space:pre;color:var(--text)}
+
+/* Syntax tokens — GitHub light */
+.kw{color:#cf222e}
+.fn{color:#6639ba}
+.cls{color:#0550ae}
+.str{color:#0a3069}
+.cmt{color:#6e7781;font-style:italic}
+.num{color:#953800}
+.dec{color:#6639ba}
+.slf{color:#cf222e}
+.op{color:var(--dim)}
+.blt{color:#116329}
+
+/* RIGHT: LESSON PANEL */
+.lesson-panel{
+  flex:1;overflow-y:scroll;
+  padding:0;
+}
+.lesson-section{
+  padding:40px 44px 48px;
+  border-bottom:1px solid var(--border);
+  transition:background .2s;
+}
+.lesson-section.in-view{background:rgba(9,105,218,.025)}
+.section-label{
+  font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--blue);margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.section-label .lines-badge{
+  background:var(--bg3);border:1px solid var(--border);
+  font-size:.68rem;font-weight:400;letter-spacing:0;text-transform:none;
+  color:var(--dim);padding:1px 7px;border-radius:10px;font-family:monospace;
+}
+.section-label .file-badge{
+  background:rgba(9,105,218,.08);border:1px solid rgba(9,105,218,.2);
+  color:var(--blue);padding:1px 7px;border-radius:10px;font-size:.68rem;font-weight:400;letter-spacing:0;text-transform:none;
+}
+h2.section-title{font-size:1.5rem;font-weight:700;margin-bottom:12px;letter-spacing:-.02em}
+.section-lead{font-size:.95rem;color:var(--dim);line-height:1.7;margin-bottom:24px;max-width:680px}
+
+/* Cards grid */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.card h4{font-size:.8rem;color:var(--blue);margin-bottom:6px;font-weight:600}
+.card p,.card li{font-size:.82rem;color:var(--dim);line-height:1.65}
+.card ul{list-style:none;padding:0}
+.card ul li::before{content:"·";margin-right:6px;color:var(--border)}
+
+/* Inline code */
+code{font-family:monospace;background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:.83em;color:var(--orange)}
+
+/* Block annotated code */
+.anno-block{background:#f8f9fa;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:20px 0}
+.anno-header{background:var(--bg3);padding:8px 14px;font-size:.72rem;color:var(--dim);border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.anno-header .badge{background:rgba(9,105,218,.08);color:var(--blue);border:1px solid rgba(9,105,218,.2);padding:1px 8px;border-radius:8px;font-family:monospace}
+.anno-code{padding:16px 20px;font-family:'SF Mono',Consolas,monospace;font-size:.78rem;line-height:1.75;white-space:pre;overflow-x:auto}
+.anno-line{display:flex;gap:12px}
+.anno-line .lnum{color:#8c959f;min-width:28px;text-align:right;user-select:none}
+.anno-line .ltext{flex:1}
+.anno-line.hl .lnum{color:var(--blue)}
+.anno-line.hl .ltext{background:rgba(9,105,218,.06);display:block}
+
+/* Shape flow */
+.shape-flow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:16px 0;font-size:.8rem}
+.shape-box{background:var(--bg3);border:1px solid var(--border);padding:4px 12px;border-radius:6px;font-family:monospace;color:var(--teal)}
+.shape-arrow{color:var(--dim)}
+.shape-note{color:var(--dim);font-size:.75rem}
+
+/* Diagram box */
+.diagram{background:#f8f9fa;border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin:20px 0;font-family:'SF Mono',Consolas,monospace;font-size:.77rem;line-height:2;color:var(--dim);overflow-x:auto}
+.diagram .hl1{color:var(--blue)}
+.diagram .hl2{color:var(--green)}
+.diagram .hl3{color:var(--orange)}
+.diagram .hl4{color:var(--purple)}
+.diagram .hlr{color:var(--red)}
+
+/* Callout */
+.callout{border-radius:8px;padding:12px 16px;margin:16px 0;font-size:.85rem;line-height:1.7}
+.callout.why{background:rgba(9,105,218,.05);border-left:3px solid var(--blue)}
+.callout.why strong{color:var(--blue)}
+.callout.tip{background:rgba(26,127,55,.05);border-left:3px solid var(--green)}
+.callout.tip strong{color:var(--green)}
+.callout.warn{background:rgba(154,103,0,.05);border-left:3px solid var(--yellow)}
+.callout.warn strong{color:var(--yellow)}
+.callout.key{background:rgba(130,80,223,.05);border-left:3px solid var(--purple)}
+.callout.key strong{color:var(--purple)}
+
+/* Formula */
+.formula{text-align:center;font-family:monospace;font-size:.9rem;color:var(--purple);background:var(--bg3);padding:12px 20px;border-radius:8px;margin:16px 0}
+
+/* List */
+.flat-list{list-style:none;margin:12px 0}
+.flat-list li{padding:5px 0 5px 16px;position:relative;font-size:.88rem;color:var(--dim);line-height:1.6}
+.flat-list li::before{content:"→";position:absolute;left:0;color:var(--blue);font-size:.75rem;top:7px}
+.flat-list li strong{color:var(--text)}
+
+/* Section nav strip at bottom */
+.section-nav{display:flex;justify-content:space-between;padding:24px 44px;border-top:1px solid var(--border);background:var(--bg2)}
+.section-nav a{font-size:.85rem;color:var(--blue)}
+
+/* TOC sidebar */
+.toc{width:180px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg2);overflow-y:auto;padding:16px 0}
+.toc-item{display:block;padding:6px 16px;font-size:.75rem;color:var(--dim);border-left:2px solid transparent;transition:.15s;cursor:pointer}
+.toc-item:hover{color:var(--text);background:var(--bg3)}
+.toc-item.active{color:var(--blue);border-left-color:var(--blue);background:rgba(9,105,218,.06)}
+.toc-head{padding:8px 16px 4px;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">← 目录</a>
+  <span class="nav-sep">|</span>
+  <span class="nav-title">第一章 · 核心 Transformer 架构</span>
+  <a href="ch1-core.html" class="active">Ch1 核心</a>
+  <a href="ch2-training.html">Ch2 训练</a>
+  <a href="ch3-multimodal.html">Ch3 多模态</a>
+  <a href="ch4-guide.html">Ch4 实战指南</a>
+</nav>
+
+<div class="split">
+
+  <!-- LEFT: CODE PANEL -->
+  <div class="code-panel" id="codePanel">
+    <div class="code-panel-header">
+      <span class="fname">model/model_minimind.py</span>
+      <span id="lineInfo">L1 – 287</span>
+    </div>
+    <table class="code-table" id="codeTable"><tbody id="codeBody"></tbody></table>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc" id="toc"></div>
+
+  <!-- RIGHT: LESSON PANEL -->
+  <div class="lesson-panel" id="lessonPanel">
+
+    <div class="lesson-section" id="s0" data-start="1" data-end="9">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L1–9</span></div>
+      <h2 class="section-title">文件概览</h2>
+      <p class="section-lead">这个文件是整个仓库最重要的文件——287行代码，实现了一个完整的现代 Transformer 语言模型。先看 imports，理解它依赖什么库。</p>
+
+      <div class="callout why">
+        <strong>文件概览：PreTrainedModel 和 GenerationMixin 提供了什么？</strong><br><br>
+        <strong>PreTrainedModel</strong> 是 HuggingFace 模型的统一基类，继承它你会自动获得：<br>
+        · <code>save_pretrained(path)</code> — 把模型权重和 config 序列化到磁盘，生成 <code>model.safetensors</code> 和 <code>config.json</code><br>
+        · <code>from_pretrained(path)</code> — 从磁盘或 HuggingFace Hub 加载权重，自动处理 dtype 转换和 device 映射<br>
+        · <code>push_to_hub()</code>、<code>from_pretrained("user/repo")</code> — 与 HuggingFace 生态无缝集成<br><br>
+        <strong>GenerationMixin</strong> 提供完整的生成流水线：<br>
+        · <code>generate()</code> — 自回归生成，内置 temperature / top_p / top_k / beam search / greedy 等策略<br>
+        · <code>greedy_search()</code>、<code>sample()</code>、<code>beam_search()</code> — 具体的解码算法<br>
+        · 自动处理 KV Cache、stopping criteria、logits processors 等<br><br>
+        MiniMind 通过继承这两个类，用 287 行实现了一个与整个 HuggingFace 生态完全兼容的现代 LLM。
+      </div>
+
+      <div class="cards">
+        <div class="card"><h4>torch / torch.nn</h4><p>PyTorch 深度学习框架。所有张量运算、神经网络层、自动求导都在这里。这是大模型实现的基础设施。</p></div>
+        <div class="card"><h4>transformers</h4><p>HuggingFace 库，提供 <code>PreTrainedModel</code>（统一加载接口）、<code>GenerationMixin</code>（生成方法）和 <code>PretrainedConfig</code>（配置基类）。</p></div>
+        <div class="card"><h4>ACT2FN</h4><p>激活函数字典，把字符串 <code>"silu"</code> 映射到 <code>torch.nn.functional.silu</code>。这样 config 里存字符串就能动态切换激活函数。</p></div>
+        <div class="card"><h4>MoeCausalLMOutputWithPast</h4><p>HuggingFace 统一的输出格式，包含 loss、logits、past_key_values（KV Cache）等字段。标准化接口便于和其他工具集成。</p></div>
+      </div>
+
+      <div class="callout why"><strong>文件结构：</strong>从上到下依次是 Config → 基础组件（RMSNorm / RoPE）→ Attention → FFN → MoE → Block → Model → CausalLM。每个类都依赖前面的类。学习顺序就是代码顺序。</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>设计原则一：极简主义</h4>
+          <p>287 行完整实现一个现代 LLM，没有任何多余的抽象层。每个类只做一件事，代码可读性优先。这使得学习者可以在半天内读懂全部代码，而不需要跨越几十个文件。</p>
+        </div>
+        <div class="card">
+          <h4>设计原则二：与工业级对齐</h4>
+          <p>所有设计决策（RMSNorm、RoPE、SwiGLU、GQA、Pre-Norm）都与 LLaMA-3、Qwen-2、Mistral 等主流生产模型保持一致。学会 MiniMind，你就学会了现代 LLM 的标准架构。</p>
+        </div>
+        <div class="card">
+          <h4>设计原则三：HuggingFace 生态兼容</h4>
+          <p>通过继承 <code>PreTrainedModel</code> 和 <code>GenerationMixin</code>，MiniMind 天然支持 <code>from_pretrained</code>、<code>save_pretrained</code>、<code>pipeline</code> 等所有 HuggingFace 工具，无需额外适配代码。</p>
+        </div>
+        <div class="card">
+          <h4>设计原则四：功能可选</h4>
+          <p>MoE、Flash Attention、KV Cache、YaRN 长度外推——每个高级功能都通过 Config 开关控制，默认关闭不影响核心学习。理解基础架构后再逐步开启高级功能。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="lesson-section" id="s1" data-start="10" data-end="45">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L10–45</span></div>
+      <h2 class="section-title">MiniMindConfig — 模型的"控制台"</h2>
+      <p class="section-lead">所有超参数集中在这一个类里。理解每个参数的含义和默认值，是读懂后续所有代码的前提。</p>
+
+      <div class="cards">
+        <div class="card">
+          <h4>hidden_size = 768</h4>
+          <p>每个 token 被表示为一个 768 维向量。整个模型的"宽度"。越大模型越强，但显存和计算也越多。<br><br>参考：GPT-2 Small = 768，LLaMA-7B = 4096，GPT-4 = ~12800（估计）</p>
+        </div>
+        <div class="card">
+          <h4>num_hidden_layers = 8</h4>
+          <p>Transformer Block 堆叠的层数，模型的"深度"。每一层都会进一步提炼 token 的语义表示。<br><br>参考：GPT-2 Small = 12，LLaMA-7B = 32</p>
+        </div>
+        <div class="card">
+          <h4>vocab_size = 6400</h4>
+          <p>词表大小，tokenizer 能把文字切成的最小单元数。6400 很小（LLaMA 是 32000），适合 demo 和学习。</p>
+        </div>
+        <div class="card">
+          <h4>num_attention_heads = 8</h4>
+          <p>多头注意力的头数。每个头独立学习不同的注意力模式。<code>head_dim = hidden_size / heads = 768/8 = 96</code></p>
+        </div>
+        <div class="card">
+          <h4>num_key_value_heads = 4</h4>
+          <p>GQA（分组查询注意力）：K/V 只有 4 个头，Q 有 8 个头。每 2 个 Q 头共享 1 套 K/V。节省 KV Cache 显存约 50%。</p>
+        </div>
+        <div class="card">
+          <h4>intermediate_size</h4>
+          <p>FFN 中间层维度。公式 <code>ceil(768 × π / 64) × 64 ≈ 2432</code>。用 π 是为了让 intermediate_size 不能被 hidden_size 整除，避免某些数值对齐带来的训练捷径。</p>
+        </div>
+        <div class="card">
+          <h4>rope_theta = 1e6</h4>
+          <p>RoPE 位置编码的频率基数。越大，模型对长距离位置信息越敏感。LLaMA-2 用 10000，新模型通常用 500000 或 1000000。</p>
+        </div>
+        <div class="card">
+          <h4>tie_word_embeddings = True</h4>
+          <p>让 <code>embed_tokens.weight</code> 和 <code>lm_head.weight</code> 共享同一个矩阵。减少参数量：<code>vocab_size × hidden_size = 6400 × 768 ≈ 5M 参数</code>节省一份。</p>
+        </div>
+      </div>
+
+      <div class="callout warn"><strong>MoE 专用参数：</strong><code>num_experts=4</code>、<code>num_experts_per_tok=1</code> 只在 <code>use_moe=True</code> 时生效。<code>router_aux_loss_coef=5e-4</code> 是负载均衡损失的权重，防止所有 token 只用同一个专家。</div>
+
+      <div class="callout tip"><strong>练习：</strong>在 Python 里跑 <code>from model.model_minimind import MiniMindConfig; c = MiniMindConfig(); print(c.intermediate_size)</code>，验证 intermediate_size 的值是多少。</div>
+
+      <div class="callout why">
+        <strong>为什么 hidden_size 要是 64 的倍数？</strong><br>
+        Tensor Core 是 NVIDIA GPU 上专门做矩阵乘法的硬件单元。它要求矩阵维度是 16/32/64 的倍数才能触发高效的 warp-level 矩阵乘法（WMMA 指令集）。<br><br>
+        <code>hidden_size = 768 = 64 × 12</code>，既满足 12 个注意力头（每头 64 维），又满足 Tensor Core 对齐要求。如果 hidden_size=700（不是 64 的倍数），GPU 会用效率更低的普通矩阵乘法，速度可能降低 30-50%。
+      </div>
+
+      <div class="callout tip">
+        <strong>intermediate_size 为什么用 π？</strong><br>
+        <code>intermediate_size = ceil(768 × π / 64) × 64 = 2432</code><br><br>
+        用 π（无理数）是为了避免整数比例导致权重矩阵的"周期性共振"。如果用整数比（如 768 × 4 = 3072），FFN 矩阵的列空间和 hidden_size 之间存在整数对齐关系，可能造成某些特征维度被"过采样"。用 π 保证 intermediate_size/hidden_size 永远是无理数，等比缩放时始终保持非整数比。
+      </div>
+
+      <div class="formula">weight_tying: lm_head.weight ≡ token_embeddings.weight  →  参数节省 = vocab_size × hidden_size = 6400 × 768 = 4.9M</div>
+    </div>
+
+    <div class="lesson-section" id="s2" data-start="50" data-end="60">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L50–60</span></div>
+      <h2 class="section-title">RMSNorm — 现代 LLM 的归一化方式</h2>
+      <p class="section-lead">归一化层让神经网络训练更稳定。理解 RMSNorm 比理解 LayerNorm 更简单，但效果相当甚至更好。</p>
+
+      <div class="callout why"><strong>为什么需要归一化？</strong>深层网络里，每一层的输出数值分布会随着训练漂移（有时变得极大或极小），导致梯度爆炸或消失。归一化把每层输入的数值"拉回"到合理范围，训练才能稳定。</div>
+
+      <div class="formula">RMSNorm(x) = x / √( mean(x²) + ε ) × γ</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>vs LayerNorm</h4>
+          <p>LayerNorm 要算均值和方差两步（<code>x - mean(x)</code> 再 <code>/ std(x)</code>），RMSNorm 只算均方根一步。计算更快，LLaMA / Mistral / GPT-4 全都改用 RMSNorm。</p>
+        </div>
+        <div class="card">
+          <h4>weight 参数 γ</h4>
+          <p>初始化为全 1 的可学习向量，维度 = hidden_size。让模型自己学习"每个维度该放大多少"。这是归一化之后的"缩放还原"。</p>
+        </div>
+        <div class="card">
+          <h4>float32 中间计算</h4>
+          <p>第 60 行：<code>self.norm(x.float())</code> 先转 float32，算完再 <code>.type_as(x)</code> 转回 bfloat16。防止 bfloat16 的低精度导致 rsqrt 计算出错。</p>
+        </div>
+        <div class="card">
+          <h4>eps = 1e-5（或 1e-6）</h4>
+          <p>防止分母为 0。当 x 全为 0 时，<code>√(0 + ε)</code> 仍有意义。Config 里用的是 <code>rms_norm_eps = 1e-6</code>。</p>
+        </div>
+      </div>
+
+      <div class="shape-flow">
+        <span class="shape-note">输入</span>
+        <span class="shape-box">[B, T, 768]</span>
+        <span class="shape-arrow">→ RMSNorm →</span>
+        <span class="shape-box">[B, T, 768]</span>
+        <span class="shape-note">（shape 不变，但每个 token 向量被归一化了）</span>
+      </div>
+
+      <div class="callout tip"><strong>在代码里的位置：</strong>RMSNorm 出现了 4 次：MiniMindBlock 的两个归一化层（attention 前和 FFN 前），MiniMindModel 最终输出的归一化，以及 Attention 内部对 Q/K 的归一化（<code>q_norm</code>/<code>k_norm</code>）。</div>
+
+      <div class="callout why">
+        <strong>RMSNorm vs LayerNorm 的区别：</strong><br>
+        <strong>LayerNorm</strong> 计算两步：①均值 <code>mean(x)</code>，②方差 <code>std(x)</code>，每步都需要遍历所有维度，共 2 次内存读取。<br>
+        <strong>RMSNorm</strong> 只计算均方根 <code>rms(x) = √mean(x²)</code>，只需 1 次遍历。假设中心化（均值≈0）已由残差连接维持，因此省去均值计算也无损效果。<br><br>
+        在 hidden_size=768 时，RMSNorm 约快 15–20%。在 hidden_size=4096（LLaMA-7B）时优势更明显。LLaMA、Mistral、Qwen 全部采用 RMSNorm。
+      </div>
+
+      <div class="anno-block">
+        <div class="anno-header"><span>RMSNorm forward 核心公式</span><span class="badge">model_minimind.py L56–60</span></div>
+        <div class="anno-code"><div class="anno-line"><span class="lnum">56</span><span class="ltext">    def norm(self, x):</span></div><div class="anno-line hl"><span class="lnum">57</span><span class="ltext">        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)</span></div><div class="anno-line"><span class="lnum">59</span><span class="ltext">    def forward(self, x):</span></div><div class="anno-line hl"><span class="lnum">60</span><span class="ltext">        return (self.weight * self.norm(x.float())).type_as(x)</span></div></div>
+      </div>
+
+      <div class="callout tip">
+        <strong>为什么先 .float() 再 rsqrt？</strong><br>
+        <code>bfloat16</code> 的精度只有约 3 位十进制有效数字（相当于 7 位二进制尾数）。当 <code>x.pow(2).mean()</code> 的值很小时，<code>rsqrt</code> 在 bfloat16 下会出现精度损失，甚至返回 <code>inf</code>。<br>
+        转换为 <code>float32</code>（7 位十进制精度）计算 rsqrt 后，再用 <code>.type_as(x)</code> 转回原始 dtype，保证数值稳定性同时不影响后续的混合精度训练。
+      </div>
+
+      <div class="callout key">
+        <strong>RMSNorm 出现在 4 个位置（完整列表）：</strong><br>
+        (1) <strong>每个 Block 的 Attention 前</strong>：<code>input_layernorm</code>，归一化后才送入 Q/K/V 投影<br>
+        (2) <strong>每个 Block 的 FFN 前</strong>：<code>post_attention_layernorm</code>，归一化 Attention 残差后的 hidden state<br>
+        (3) <strong>模型最终输出前</strong>：<code>final_norm</code>（即 MiniMindModel 的 <code>self.norm</code>），在 lm_head 前做最后一次归一化<br>
+        (4) <strong>Attention 内部 QK 归一化</strong>：<code>q_norm</code> 和 <code>k_norm</code>，防止 Q·K 点积数值过大，来自 Qwen2.5 的设计
+      </div>
+    </div>
+
+    <div class="lesson-section" id="s3" data-start="62" data-end="84">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L62–84</span></div>
+      <h2 class="section-title">RoPE 位置编码 — 让模型知道词的顺序</h2>
+      <p class="section-lead">Transformer 的 Attention 本身是"顺序无关"的——把句子打乱顺序，Attention 看到一样的结果。位置编码解决这个问题：把位置信息注入 Q 和 K。</p>
+
+      <div class="callout why"><strong>为什么用 RoPE？</strong>传统方法（sin/cos 绝对位置编码）把位置直接加到 embedding 上，导致 Q·K 的点积同时依赖绝对位置 m 和 n。RoPE 通过旋转让 Q_m · K_n 只依赖相对距离 (m-n)，这对长文本泛化非常关键。</div>
+
+      <div class="formula">q_rotated[m] = q[m] · cos(mθ) + rotate_half(q[m]) · sin(mθ)</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>precompute_freqs_cis</h4>
+          <p>在模型初始化时运行一次，预计算所有位置的 cos 和 sin 值，存为 buffer（<code>freqs_cos</code>, <code>freqs_sin</code>）。推理时直接查表，不重复计算。</p>
+        </div>
+        <div class="card">
+          <h4>频率 θ_i = 1 / (base^(2i/dim))</h4>
+          <p>每个维度对应不同的旋转频率。低维度旋转慢（编码长程位置），高维度旋转快（编码短程位置）。这和傅里叶变换的思想一样。</p>
+        </div>
+        <div class="card">
+          <h4>rotate_half</h4>
+          <p>把向量的后半段移到前面并取负号，实现 90° 旋转：<code>[-x₂, x₁]</code>。配合 cos/sin 实现任意角度的 2D 旋转。</p>
+        </div>
+        <div class="card">
+          <h4>YaRN 长度外推</h4>
+          <p>当序列长度超过训练时的 <code>max_position_embeddings</code>，通过线性插值部分频率实现外推。代码里 <code>rope_scaling</code> 参数控制这个行为，推理时可以开启。</p>
+        </div>
+      </div>
+
+      <div class="diagram">
+<span class="hl1">precompute_freqs_cis(dim=96, end=32768):</span>
+  dim=96 → 48 个频率对
+  频率 = [1/θ^(0/96), 1/θ^(2/96), ..., 1/θ^(94/96)]  (θ=1e6)
+  t = [0, 1, 2, ..., 32767]  (所有位置)
+  freqs = outer(t, 频率)  → <span class="hl2">[32768, 48]</span>
+  freqs_cos = cat([cos(freqs), cos(freqs)], dim=-1) → <span class="hl2">[32768, 96]</span>
+  freqs_sin = cat([sin(freqs), sin(freqs)], dim=-1) → <span class="hl2">[32768, 96]</span>
+
+<span class="hl1">使用时（在 MiniMindModel.forward 里）：</span>
+  position_embeddings = (freqs_cos[start_pos:start_pos+T],
+                         freqs_sin[start_pos:start_pos+T])
+  → 只取当前 batch 的位置对应的 cos/sin，shape <span class="hl2">[T, 96]</span></div>
+
+      <div class="callout tip"><strong>关键认知：</strong>RoPE 只作用于 Q 和 K，不作用于 V。这是因为 Q·K 的点积决定"注意力权重"（位置相关），而 V 是"值"（不需要感知位置）。</div>
+
+      <div class="callout why">
+        <strong>RoPE 的核心思想：让内积只依赖相对位置</strong><br>
+        传统绝对位置编码把位置向量加到 token embedding 上，导致 Q·K 的内积同时依赖位置 m 和 n，无法直接建模"距离"。<br><br>
+        RoPE 的构造目标：找一个变换 f，使得 <code>f(q, m) · f(k, n) = q · R_{m-n} k</code>。<br>
+        解：令 <code>f(q, m) = R_m q</code>，其中 R_m 是旋转矩阵。在复平面上，这等价于把每对维度 (2i, 2i+1) 旋转 <code>m × θᵢ</code> 弧度。两个旋转向量的内积 <code>R_m q · R_n k = q · R_{m-n} k</code>，只依赖相对位置差 (m-n)。
+      </div>
+
+      <div class="formula">每对维度 (2i, 2i+1) 的旋转角度：θᵢ = 1 / rope_theta^(2i/d)  →  低维频率快（局部模式），高维频率慢（长程依赖）</div>
+
+      <div class="callout tip">
+        <strong>rope_theta=1,000,000 vs 传统 10,000 的区别：</strong><br>
+        θᵢ = 1 / rope_theta^(2i/d)，rope_theta 越大，θᵢ 越小，旋转越慢。<br>
+        · rope_theta=10,000（原始 RoPE）：位置 0 和位置 1000 的旋转角度差已接近 2π，模型很难区分更远的位置。<br>
+        · rope_theta=1,000,000（LLaMA-3 / Qwen-2 风格）：相邻 token 之间的旋转角度差很小，模型能区分数万个位置。<br>
+        这是 LLaMA-3 和 Qwen-2 支持 128K 上下文长度的关键技术之一。
+      </div>
+
+      <figure style="margin:20px 0">
+      <svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        <defs>
+          <marker id="rope-a" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#57606a"/></marker>
+        </defs>
+        <rect width="560" height="200" rx="10" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <text x="280" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2328">RoPE 位置编码：旋转频率随维度递减</text>
+        <!-- Token labels -->
+        <text x="50" y="50" text-anchor="middle" font-size="11" fill="#57606a">Token pos=0</text>
+        <text x="200" y="50" text-anchor="middle" font-size="11" fill="#57606a">Token pos=1</text>
+        <text x="350" y="50" text-anchor="middle" font-size="11" fill="#57606a">Token pos=2</text>
+        <text x="500" y="50" text-anchor="middle" font-size="11" fill="#57606a">Token pos=3</text>
+        <!-- Low-freq dims (large circles, slow rotation) -->
+        <text x="20" y="100" font-size="10" fill="#0969da">低频维</text>
+        <text x="20" y="115" font-size="10" fill="#0969da">(θ₀ 慢)</text>
+        <circle cx="50" cy="108" r="28" fill="none" stroke="#d0d7de" stroke-width="1"/>
+        <line x1="50" y1="108" x2="78" y2="108" stroke="#0969da" stroke-width="2" marker-end="url(#rope-a)"/>
+        <text x="50" y="148" text-anchor="middle" font-size="9" fill="#0969da">0°</text>
+
+        <circle cx="200" cy="108" r="28" fill="none" stroke="#d0d7de" stroke-width="1"/>
+        <line x1="200" y1="108" x2="224" y2="94" stroke="#0969da" stroke-width="2" marker-end="url(#rope-a)"/>
+        <text x="200" y="148" text-anchor="middle" font-size="9" fill="#0969da">+2°</text>
+
+        <circle cx="350" cy="108" r="28" fill="none" stroke="#d0d7de" stroke-width="1"/>
+        <line x1="350" y1="108" x2="374" y2="81" stroke="#0969da" stroke-width="2" marker-end="url(#rope-a)"/>
+        <text x="350" y="148" text-anchor="middle" font-size="9" fill="#0969da">+4°</text>
+
+        <circle cx="500" cy="108" r="28" fill="none" stroke="#d0d7de" stroke-width="1"/>
+        <line x1="500" y1="108" x2="519" y2="84" stroke="#0969da" stroke-width="2" marker-end="url(#rope-a)"/>
+        <text x="500" y="148" text-anchor="middle" font-size="9" fill="#0969da">+6°</text>
+
+        <!-- High-freq dims (fast rotation) -->
+        <text x="20" y="165" font-size="10" fill="#bc4c00">高频维</text>
+        <text x="20" y="178" font-size="10" fill="#bc4c00">(θ₃₈₃ 快)</text>
+        <text x="50" y="170" text-anchor="middle" font-size="9" fill="#bc4c00">0°</text>
+        <text x="200" y="170" text-anchor="middle" font-size="9" fill="#bc4c00">+45°</text>
+        <text x="350" y="170" text-anchor="middle" font-size="9" fill="#bc4c00">+90°</text>
+        <text x="500" y="170" text-anchor="middle" font-size="9" fill="#bc4c00">+135°</text>
+
+        <!-- Key insight -->
+        <text x="280" y="190" text-anchor="middle" font-size="10" fill="#57606a">Q·K 内积只依赖相对位置 (m-n)，与绝对位置无关 → 外推到训练长度之外</text>
+      </svg>
+      <figcaption style="text-align:center;font-size:.75rem;color:#57606a;margin-top:4px">不同频率维度的旋转速度。低频维旋转慢（捕获长程依赖），高频维旋转快（捕获局部模式）。</figcaption>
+      </figure>
+
+      <div class="callout warn">
+        <strong>常见错误：把 RoPE 也应用到 V</strong><br>
+        在 Attention 计算中，只有 Q 和 K 参与位置匹配（Q·K 计算相关性），V 只负责"取出内容"（加权求和）。<br>
+        V 不参与点积计算，对它做 RoPE 旋转毫无意义，还会破坏它的语义。只有 Q 和 K 需要位置编码，这是 RoPE 论文的基本设计原则。
+      </div>
+    </div>
+
+    <div class="lesson-section" id="s4" data-start="86" data-end="134">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L86–134</span></div>
+      <h2 class="section-title">Attention — 大模型最核心的机制</h2>
+      <p class="section-lead">Attention 是 Transformer 的灵魂：让每个 token 决定"要借鉴序列中哪些位置的信息，借鉴多少"。理解这一层，你就理解了 70% 的 Transformer。</p>
+
+      <div class="callout why"><strong>直觉理解：</strong>想象你在理解"苹果"这个词。它可能是水果（借鉴"吃"这个词的上下文），也可能是公司（借鉴"iPhone"的上下文）。Attention 让"苹果"这个 token 去"查询"（Q）其他所有 token 的"键"（K），找到相关的，然后把它们的"值"（V）加权求和回来。</div>
+
+      <div class="diagram">
+<span class="hl1">输入：</span> x [B=2, T=10, hidden=768]
+         ↓
+<span class="hl1">三个线性投影（无 bias）：</span>
+  Q = x @ W_q  → [B, T, 8×96=768]   <span class="hl2">8个查询头</span>
+  K = x @ W_k  → [B, T, 4×96=384]   <span class="hl3">4个键头（GQA）</span>
+  V = x @ W_v  → [B, T, 4×96=384]   <span class="hl3">4个值头（GQA）</span>
+         ↓
+<span class="hl1">reshape 为多头格式：</span>
+  Q → [B, T, 8, 96]  K → [B, T, 4, 96]  V → [B, T, 4, 96]
+         ↓
+<span class="hl1">Q/K 各自做 RMSNorm（QK-norm）</span>
+         ↓
+<span class="hl1">旋转位置编码（RoPE）作用于 Q 和 K</span>
+         ↓
+<span class="hl1">KV Cache 拼接：</span>
+  xk = cat([past_k, xk], dim=1)  → [B, T_total, 4, 96]
+         ↓
+<span class="hl1">GQA repeat_kv：</span> 4头 → 8头（每头复制 n_rep=2 次）
+  xk → [B, T_total, 8, 96]  xv → [B, T_total, 8, 96]
+         ↓ transpose(1,2)
+  Q  [B, 8, T, 96]  K [B, 8, T_total, 96]  V [B, 8, T_total, 96]
+         ↓
+<span class="hl1">注意力计算：</span>
+  scores = Q @ K^T / √96 → [B, 8, T, T_total]
+  causal mask: 上三角设 -inf（不能看未来）
+  attn_w = softmax(scores) → [B, 8, T, T_total]
+  output = attn_w @ V    → [B, 8, T, 96]
+         ↓ reshape + o_proj
+<span class="hl2">输出：</span> [B, T, 768]</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>GQA（分组查询注意力）L94–97</h4>
+          <p>Q 头数 8，KV 头数 4，比例 <code>n_rep = 8/4 = 2</code>。<code>repeat_kv()</code> 函数把 KV 从 4 头复制成 8 头。这是 LLaMA-2 引入的优化，推理时 KV Cache 显存减半。</p>
+        </div>
+        <div class="card">
+          <h4>QK-Norm L104–105</h4>
+          <p><code>q_norm</code> 和 <code>k_norm</code> 是 Attention 内部对每个头的 Q/K 做的 RMSNorm。这是来自 Qwen2.5 等新模型的设计——防止 Q·K 点积数值过大，训练更稳定。</p>
+        </div>
+        <div class="card">
+          <h4>KV Cache L120–123</h4>
+          <p>推理时，历史 token 的 K/V 不需要重新算，缓存起来。每步只送最新的 1 个 token 进来，用 <code>cat([past_k, new_k])</code> 拼接。生成长文本的核心加速技术。</p>
+        </div>
+        <div class="card">
+          <h4>Flash Attention L109, L125–126</h4>
+          <p>用 PyTorch 内置的 <code>F.scaled_dot_product_attention</code>。用 tiling 减少 GPU HBM 读写，比手写 softmax 快 2-4×。条件：seq_len > 1 且没有 KV Cache（因为 Flash 不支持 mask + past kv 的混合场景）。</p>
+        </div>
+        <div class="card">
+          <h4>Causal Mask L129</h4>
+          <p><code>torch.full((T, T), -inf).triu(1)</code> 生成上三角 -inf 矩阵。加到 scores 上后，softmax 这些位置的权重变 0。这保证 token i 只能看到位置 0..i 的信息，不能看到未来。</p>
+        </div>
+        <div class="card">
+          <h4>/ √head_dim L128</h4>
+          <p>scores 除以 √96 ≈ 9.8。防止 Q·K 点积数值随 head_dim 增大而变得很大，导致 softmax 梯度消失（softmax 在输入极大时会趋近 one-hot，梯度接近 0）。</p>
+        </div>
+      </div>
+
+      <div class="shape-flow">
+        <span class="shape-box">[B,8,T,96]</span><span class="shape-arrow">@</span>
+        <span class="shape-box">[B,8,96,T]</span><span class="shape-arrow">/ √96</span>
+        <span class="shape-box">[B,8,T,T]</span><span class="shape-arrow">softmax</span>
+        <span class="shape-box">[B,8,T,T]</span><span class="shape-arrow">@</span>
+        <span class="shape-box">[B,8,T,96]</span><span class="shape-arrow">→ reshape →</span>
+        <span class="shape-box">[B,T,768]</span>
+      </div>
+
+      <div class="callout why">
+        <strong>Flash Attention 如何节省显存？</strong><br>
+        标准 Scaled Dot-Product Attention 需要在 HBM（GPU 显存）中实例化完整的 [T, T] 注意力矩阵。当 seq_len=2048、8 个头、float16 时，单层的注意力矩阵就占用 <code>2048 × 2048 × 8 × 2 bytes ≈ 64MB</code>。8 层合计超过 500MB，这在训练长序列时是巨大的瓶颈。<br><br>
+        Flash Attention 利用 GPU L1/L2 缓存（SRAM）的 tiling 技术，将 Q/K/V 分成小块，在 SRAM 中分块计算 softmax 和加权求和，从不在 HBM 中保存完整的 [T,T] 矩阵。峰值显存从 O(T²) 降到 O(T)，同时由于减少了 HBM 读写次数，速度也更快（快 2-4×）。
+      </div>
+
+      <div class="anno-block">
+        <div class="anno-header"><span>Flash Attention 调用方式</span><span class="badge">model_minimind.py L125–126</span></div>
+        <div class="anno-code"><div class="anno-line"><span class="lnum">109</span><span class="ltext">    use_flash = (self.flash_attn and q.shape[1] &gt; 1)</span></div><div class="anno-line hl"><span class="lnum">125</span><span class="ltext">    output = F.scaled_dot_product_attention(xq, xk, xv, attn_mask=None,</span></div><div class="anno-line hl"><span class="lnum">126</span><span class="ltext">                                            dropout_p=0.0, is_causal=True)</span></div><div class="anno-line"><span class="lnum">127</span><span class="ltext">    # is_causal=True 自动应用因果掩码，无需手动创建 triu 矩阵</span></div></div>
+      </div>
+
+      <div class="callout tip">
+        <strong>GQA（分组查询注意力）的显存节省：</strong><br>
+        标准 MHA（多头注意力）：每层 KV Cache = <code>2 × T × num_heads × head_dim</code> = <code>2 × T × 8 × 96</code><br>
+        GQA（4个KV头共享给8个Q头）：每层 KV Cache = <code>2 × T × 4 × 96</code>，节省 <strong>50%</strong><br><br>
+        如果 batch_size=8，总节省 = 8 × 50% = 显存缩减至原来的 1/2（相对 batch）。在推理场景下，KV Cache 通常是显存瓶颈，GQA 是支持大 batch 推理的核心技术。LLaMA-2 70B 使用 GQA 后推理显存从 140GB 降到约 70GB。
+      </div>
+
+      <div class="callout key">
+        <strong>KV Cache 工作流程详解：</strong><br>
+        <strong>第 0 步（prefill）</strong>：输入完整提示词（seqlen=N），计算并保存所有 8 层的 K/V 张量，shape 为 <code>[B, N, 4, 96]</code>。这一步计算量最大，是 O(N²)。<br>
+        <strong>第 1~T 步（decode）</strong>：每次只输入 1 个新 token，forward 只计算该 token 的 Q，然后与缓存的 K/V 做注意力（<code>K = cat([past_K, new_k])</code>）。每步计算量 O(N+t)，而不是 O((N+t)²)。<br>
+        整体时间复杂度从 O(T² × layers) 降到 O(N² × layers + T × N × layers)，对于长文本生成加速极为显著。
+      </div>
+      <figure style="margin:20px 0">
+      <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:600px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        <rect width="600" height="220" rx="10" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <text x="300" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2328">KV Cache：两个阶段</text>
+
+        <!-- Phase 1: Prefill -->
+        <rect x="20" y="36" width="260" height="170" rx="8" fill="white" stroke="#0969da" stroke-width="1.5"/>
+        <text x="150" y="57" text-anchor="middle" font-size="12" font-weight="700" fill="#0969da">阶段一：Prefill（预填充）</text>
+        <!-- tokens -->
+        <rect x="35" y="64" width="36" height="28" rx="4" fill="#eff6ff" stroke="#0969da" stroke-width="1"/>
+        <text x="53" y="83" text-anchor="middle" font-size="10" fill="#0969da">t₁</text>
+        <rect x="77" y="64" width="36" height="28" rx="4" fill="#eff6ff" stroke="#0969da" stroke-width="1"/>
+        <text x="95" y="83" text-anchor="middle" font-size="10" fill="#0969da">t₂</text>
+        <rect x="119" y="64" width="36" height="28" rx="4" fill="#eff6ff" stroke="#0969da" stroke-width="1"/>
+        <text x="137" y="83" text-anchor="middle" font-size="10" fill="#0969da">t₃</text>
+        <rect x="161" y="64" width="36" height="28" rx="4" fill="#eff6ff" stroke="#0969da" stroke-width="1"/>
+        <text x="179" y="83" text-anchor="middle" font-size="10" fill="#0969da">t₄</text>
+        <text x="214" y="83" font-size="11" fill="#57606a">…全部 N tokens</text>
+
+        <text x="35" y="114" font-size="10" fill="#57606a">↓ 一次性计算所有 K, V</text>
+
+        <!-- KV cache boxes -->
+        <rect x="35" y="122" width="230" height="22" rx="4" fill="#dcfce7" stroke="#1a7f37" stroke-width="1"/>
+        <text x="150" y="137" text-anchor="middle" font-size="10" fill="#1a7f37">K Cache: [N, d_k] × 8 layers</text>
+        <rect x="35" y="150" width="230" height="22" rx="4" fill="#dcfce7" stroke="#1a7f37" stroke-width="1"/>
+        <text x="150" y="165" text-anchor="middle" font-size="10" fill="#1a7f37">V Cache: [N, d_v] × 8 layers</text>
+        <text x="150" y="196" text-anchor="middle" font-size="10" fill="#57606a">计算量：O(N²)，存储：O(N)</text>
+
+        <!-- Phase 2: Decode -->
+        <rect x="320" y="36" width="260" height="170" rx="8" fill="white" stroke="#1a7f37" stroke-width="1.5"/>
+        <text x="450" y="57" text-anchor="middle" font-size="12" font-weight="700" fill="#1a7f37">阶段二：Decode（逐 token 生成）</text>
+
+        <!-- new token -->
+        <rect x="335" y="64" width="36" height="28" rx="4" fill="#dcfce7" stroke="#1a7f37" stroke-width="2"/>
+        <text x="353" y="83" text-anchor="middle" font-size="10" font-weight="700" fill="#1a7f37">tₙ</text>
+        <text x="385" y="78" font-size="10" fill="#57606a">← 只处理</text>
+        <text x="385" y="90" font-size="10" fill="#57606a">这1个新token</text>
+
+        <text x="335" y="114" font-size="10" fill="#57606a">↓ 计算新 K,V，拼接到 Cache</text>
+
+        <rect x="335" y="122" width="230" height="22" rx="4" fill="#dcfce7" stroke="#1a7f37" stroke-width="1"/>
+        <text x="450" y="137" text-anchor="middle" font-size="10" fill="#1a7f37">K Cache: [N+1, d_k]（append）</text>
+        <rect x="335" y="150" width="230" height="22" rx="4" fill="#dcfce7" stroke="#1a7f37" stroke-width="1"/>
+        <text x="450" y="165" text-anchor="middle" font-size="10" fill="#1a7f37">V Cache: [N+1, d_v]（append）</text>
+        <text x="450" y="196" text-anchor="middle" font-size="10" fill="#57606a">计算量：O(N)，每步恒定</text>
+      </svg>
+      <figcaption style="text-align:center;font-size:.75rem;color:#57606a;margin-top:4px">Prefill 一次性处理提示词并填充 KV Cache；Decode 每步只处理 1 个 token，速度随序列长度线性而非平方增长。</figcaption>
+      </figure>
+
+    </div>
+
+    <div class="lesson-section" id="s5" data-start="136" data-end="146">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L136–146</span></div>
+      <h2 class="section-title">FeedForward / SwiGLU — 每个 token 的"深度加工"</h2>
+      <p class="section-lead">Attention 负责 token 之间的信息交流，FFN 负责每个 token 自己的"深度推理"。研究表明 FFN 是模型存储"知识"的地方。</p>
+
+      <div class="callout why"><strong>为什么 FFN 能存储知识？</strong>神经科学研究发现，FFN 的行为类似于键值存储器：某些神经元在特定概念出现时激活（比如一个神经元专门在"法国"这个概念出现时激活，另一个在"首都"时激活）。</div>
+
+      <div class="formula">SwiGLU(x) = down_proj( SiLU(gate_proj(x)) × up_proj(x) )</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>三个矩阵的角色</h4>
+          <ul>
+            <li><code>gate_proj</code>: 768 → 2432（升维，门控信号）</li>
+            <li><code>up_proj</code>: 768 → 2432（升维，信息流）</li>
+            <li><code>down_proj</code>: 2432 → 768（降维，投影回去）</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>SwiGLU vs 原版 FFN</h4>
+          <p>原版 FFN（GPT-2）：<code>ReLU(x @ W1) @ W2</code><br>SwiGLU（LLaMA）：<code>SiLU(x @ W_gate) × (x @ W_up)</code> 然后 <code>@ W_down</code><br><br>门控机制让模型"选择性地"激活信息流，更强的表达能力。</p>
+        </div>
+        <div class="card">
+          <h4>SiLU 激活函数</h4>
+          <p><code>SiLU(x) = x × sigmoid(x)</code>，比 ReLU 平滑，允许小的负值通过（不完全截断），梯度更稳定。也叫 Swish。</p>
+        </div>
+        <div class="card">
+          <h4>bias=False</h4>
+          <p>三个 Linear 层都不用偏置项，节省参数。现代大模型普遍做法，配合 RMSNorm 效果一样好。</p>
+        </div>
+      </div>
+
+      <div class="shape-flow">
+        <span class="shape-box">[B,T,768]</span>
+        <span class="shape-arrow">gate_proj →</span><span class="shape-box">[B,T,2432]</span>
+        <span class="shape-arrow">× up_proj →</span><span class="shape-box">[B,T,2432]</span>
+        <span class="shape-arrow">down_proj →</span><span class="shape-box">[B,T,768]</span>
+      </div>
+
+      <div class="callout why">
+        <strong>SwiGLU 的门控机制：</strong><br>
+        <code>gate_proj(x)</code> 经过 SiLU 激活后，输出一个每个维度都在 (-∞, +∞) 的"软掩码"（SiLU 输出可正可负，正值代表"开放"，负值代表"抑制"）。<br>
+        这个掩码与 <code>up_proj(x)</code>（信息流）逐元素相乘，动态决定每个特征维度"开放多少信息"。<br><br>
+        与原版 ReLU FFN 相比，SwiGLU 的门控是<strong>输入依赖的</strong>（不同的 token 会产生不同的门控模式），这让 FFN 具备了类似注意力的选择性——对不同类型的输入激活不同的"知识神经元"。
+      </div>
+
+      <div class="formula">SwiGLU: FFN(x) = down_proj( SiLU(gate_proj(x)) ⊗ up_proj(x) )  ←  3 个线性层，无偏置</div>
+
+      <div class="callout tip">
+        <strong>FFN 参数占比分析：</strong><br>
+        单层 FFN 参数 = <code>3 × hidden_size × intermediate_size</code> = <code>3 × 768 × 2432 = 5,603,328 ≈ 5.6M</code><br>
+        8 层 FFN 总参数 ≈ <code>5.6M × 8 = 44.8M</code>，约占总参数的 <strong>45%</strong>。<br><br>
+        FFN 被认为是模型的"键值记忆"（Key-Value Memory）：gate_proj/up_proj 的每一行是一个"键"（对应某种概念/模式），down_proj 的对应列是"值"（该概念对应的输出激活）。Attention 负责"查找哪个键被激活"，FFN 负责"提取对应的值并输出"。
+      </div>
+
+      <div class="callout warn">
+        <strong>为什么没有 bias？</strong><br>
+        在 RMSNorm 之后，输入已经被归一化（分布中心化，方差统一），bias 是冗余的——RMSNorm 的可学习缩放参数 γ 已经能提供"偏移"的自由度。<br>
+        更重要的是：量化时（INT8/INT4 推理），bias 需要额外的量化参数（scale + zero_point），会增加误差源。去掉 bias 使量化更简单、更精确。LLaMA、Mistral、Qwen 都去掉了所有 FFN 的 bias。
+      </div>
+    </div>
+
+    <div class="lesson-section" id="s6" data-start="148" data-end="176">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L148–176</span></div>
+      <h2 class="section-title">MOEFeedForward — 混合专家，更大的容量</h2>
+      <p class="section-lead">MoE（Mixture of Experts）是 GPT-4、Mixtral、DeepSeek 采用的技术。核心思想：把一个大 FFN 换成 N 个小 FFN（专家），每个 token 只激活其中 Top-K 个，参数量翻 N 倍但计算量不变。</p>
+
+      <div class="callout why"><strong>为什么 MoE 有效？</strong>不同的专家会"专注"于不同类型的 token（代码/数学/语言）。路由器学会把对应类型的 token 送给对应的专家，实现专业化。这比一个大 FFN 处理所有情况更有效率。</div>
+
+      <div class="diagram">
+x [B×T, 768]
+    ↓
+<span class="hl1">gate = Linear(768, 4)</span>  → 4个专家的原始分数
+    ↓ softmax
+<span class="hl2">scores [B×T, 4]</span>  → 每个 token 对应的专家概率
+    ↓ topk(k=1)
+<span class="hl1">topk_idx [B×T, 1]</span>  被选中的专家编号
+<span class="hl1">topk_weight [B×T, 1]</span>  被选中专家的权重
+
+<span class="hl1">并行处理每个专家：</span>
+  Expert 0: 找到选了我的 token → FeedForward → 加权写回 y
+  Expert 1: 找到选了我的 token → FeedForward → 加权写回 y
+  Expert 2: ...
+  Expert 3: ...
+
+<span class="hlr">aux_loss（负载均衡损失）：</span>
+  鼓励 4 个专家被均匀使用，防止"专家崩塌"
+  load = 每个专家被选中的频率
+  aux_loss = (load × mean_score).sum() × 4 × 5e-4</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>专家崩塌问题</h4>
+          <p>如果没有 aux_loss，模型可能只用其中 1-2 个专家，其他专家永远不被使用（因为它们从没被训练过）。负载均衡损失强迫所有专家均匀参与。</p>
+        </div>
+        <div class="card">
+          <h4>训练时的 dummy gradient</h4>
+          <p>L169–170：如果某个专家在当前 batch 完全没被选中（<code>not mask.any()</code>），训练时仍然加一个 <code>0 * sum(params)</code> 的假梯度，防止 DDP 报错（参数必须都参与反向传播）。</p>
+        </div>
+      </div>
+
+      <div class="callout tip"><strong>这里的 MoE 和 DeepSeek 的区别：</strong>这里是最简单的 Top-1 路由，没有共享专家。DeepSeek-MoE 有专门的 shared_expert 让所有 token 都经过，同时再选 K 个专家。更复杂但效果更好。</div>
+
+      <div class="callout why">
+        <strong>为什么需要负载均衡损失（aux_loss）？</strong><br>
+        如果没有任何约束，MoE 路由器会收敛到只使用 1-2 个专家——这叫"专家崩塌"（Expert Collapse）。原因是一个正反馈循环：<br>
+        · 某个专家偶然处理了更多 token → 获得更多梯度更新 → 变得更强<br>
+        · 更强的专家 → 路由器更倾向于选它 → 更多 token → 更多梯度……<br><br>
+        其他专家由于从未被选中，参数从未被训练，永远保持初始化状态，白白占用显存。aux_loss 强制每个专家接收相近数量的 token，打破这个正反馈。
+      </div>
+
+      <div class="formula">L_aux = N_experts × coef × Σᵢ(fᵢ × pᵢ)  其中 fᵢ = token分配比例，pᵢ = 平均路由概率。最小值在 fᵢ=pᵢ=1/N 时取到（完美均衡）。</div>
+
+      <figure style="margin:20px 0">
+      <svg viewBox="0 0 560 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        <defs>
+          <marker id="moe-a" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#57606a"/></marker>
+          <marker id="moe-s" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#0969da"/></marker>
+          <marker id="moe-p" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#8250df"/></marker>
+        </defs>
+        <rect width="560" height="190" rx="10" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <text x="280" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2328">Mixture of Experts (MoE) — Top-2 路由</text>
+
+        <!-- Input -->
+        <rect x="225" y="32" width="110" height="30" rx="6" fill="white" stroke="#d0d7de" stroke-width="1.5"/>
+        <text x="280" y="52" text-anchor="middle" font-size="11" fill="#57606a">输入 token x</text>
+
+        <!-- Arrow to router -->
+        <line x1="280" y1="62" x2="280" y2="80" stroke="#57606a" stroke-width="1.5" marker-end="url(#moe-a)"/>
+
+        <!-- Router -->
+        <rect x="205" y="80" width="150" height="30" rx="6" fill="#faf5ff" stroke="#8250df" stroke-width="2"/>
+        <text x="280" y="100" text-anchor="middle" font-size="11" font-weight="700" fill="#8250df">Router Gate (Softmax)</text>
+
+        <!-- Fan out to experts -->
+        <line x1="200" y1="95" x2="80" y2="140" stroke="#8250df" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#moe-p)"/>
+        <line x1="240" y1="110" x2="180" y2="138" stroke="#0969da" stroke-width="2" marker-end="url(#moe-s)"/>
+        <line x1="280" y1="110" x2="280" y2="138" stroke="#0969da" stroke-width="2" marker-end="url(#moe-s)"/>
+        <line x1="320" y1="110" x2="380" y2="138" stroke="#8250df" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#moe-p)"/>
+        <line x1="360" y1="95" x2="480" y2="140" stroke="#8250df" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#moe-p)"/>
+
+        <!-- Experts -->
+        <rect x="35" y="140" width="90" height="28" rx="5" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="80" y="158" text-anchor="middle" font-size="10" fill="#57606a">Expert 1</text>
+        <rect x="135" y="140" width="90" height="28" rx="5" fill="#eff6ff" stroke="#0969da" stroke-width="2"/>
+        <text x="180" y="158" text-anchor="middle" font-size="10" font-weight="700" fill="#0969da">Expert 2 ✓</text>
+        <rect x="235" y="140" width="90" height="28" rx="5" fill="#eff6ff" stroke="#0969da" stroke-width="2"/>
+        <text x="280" y="158" text-anchor="middle" font-size="10" font-weight="700" fill="#0969da">Expert 3 ✓</text>
+        <rect x="335" y="140" width="90" height="28" rx="5" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="380" y="158" text-anchor="middle" font-size="10" fill="#57606a">Expert 4</text>
+        <rect x="435" y="140" width="90" height="28" rx="5" fill="#eef1f4" stroke="#d0d7de" stroke-width="1"/>
+        <text x="480" y="158" text-anchor="middle" font-size="10" fill="#57606a">Expert N</text>
+        <text x="430" y="154" font-size="14" fill="#d0d7de">…</text>
+
+        <!-- Labels -->
+        <text x="180" y="180" text-anchor="middle" font-size="9" fill="#0969da">g₂·FFN₂(x)</text>
+        <text x="280" y="180" text-anchor="middle" font-size="9" fill="#0969da">g₃·FFN₃(x)</text>
+        <text x="60" y="180" text-anchor="middle" font-size="9" fill="#d0d7de">跳过</text>
+        <text x="375" y="180" text-anchor="middle" font-size="9" fill="#d0d7de">跳过</text>
+        <text x="480" y="180" text-anchor="middle" font-size="9" fill="#d0d7de">跳过</text>
+      </svg>
+      <figcaption style="text-align:center;font-size:.75rem;color:#57606a;margin-top:4px">Top-2 路由：Router 给出所有 Expert 的概率分布，只激活概率最高的 2 个。虚线表示被跳过的 Expert，节省了 (N-2)/N 的计算量。</figcaption>
+      </figure>
+
+      <div class="callout tip">
+        <strong>虚拟梯度技巧（Straight-Through Estimator 变体）：</strong><br>
+        路由器输出 <code>gates = softmax(linear(x))</code>，然后用 <code>topk(gates)</code> 选择专家。<code>topk</code> 是离散操作（argmax），本身无法求导。<br><br>
+        代码中通过 <code>output = y + gates - gates.detach()</code> 把梯度"附着"到离散选择上：在前向传播时等价于 y（正常输出），但反向传播时梯度会流经 gates（可导的 softmax 输出），让路由器参数能被 aux_loss 训练。这是离散优化中常见的 Straight-Through Estimator 技巧的变体。
+      </div>
+    </div>
+
+    <div class="lesson-section" id="s7" data-start="178" data-end="194">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L178–194</span></div>
+      <h2 class="section-title">MiniMindBlock — 把所有组件组装成一层</h2>
+      <p class="section-lead">一个 Block 是 Transformer 的基本单元，包含 Attention + FFN，加上两个关键设计：Pre-Norm 和残差连接。</p>
+
+      <figure style="margin:20px 0">
+      <svg viewBox="0 0 520 510" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        <defs>
+          <marker id="tb-a0" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#57606a"/></marker>
+          <marker id="tb-a1" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#0969da"/></marker>
+          <marker id="tb-a2" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#1a7f37"/></marker>
+        </defs>
+        <rect width="520" height="510" rx="12" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1.5"/>
+        <text x="260" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#1f2328">MiniMindBlock — Pre-Norm + 残差连接</text>
+        <!-- Input -->
+        <text x="260" y="56" text-anchor="middle" font-size="12" fill="#57606a">输入 x ∈ ℝ^[T × 768]</text>
+        <line x1="260" y1="62" x2="260" y2="80" stroke="#57606a" stroke-width="1.5" marker-end="url(#tb-a0)"/>
+        <!-- Skip 1 left -->
+        <path d="M260,66 H95 V254" stroke="#0969da" stroke-width="1.5" stroke-dasharray="5,3" fill="none"/>
+        <line x1="95" y1="254" x2="234" y2="254" stroke="#0969da" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#tb-a1)"/>
+        <text x="74" y="172" text-anchor="middle" font-size="10" fill="#0969da" transform="rotate(-90,74,172)">残差 skip 1</text>
+        <!-- RMSNorm 1 -->
+        <rect x="180" y="80" width="160" height="34" rx="7" fill="white" stroke="#d0d7de" stroke-width="1.5"/>
+        <text x="260" y="102" text-anchor="middle" font-size="12" fill="#57606a">RMSNorm</text>
+        <line x1="260" y1="114" x2="260" y2="130" stroke="#57606a" stroke-width="1.5" marker-end="url(#tb-a0)"/>
+        <!-- Attention -->
+        <rect x="120" y="130" width="280" height="62" rx="8" fill="#eff6ff" stroke="#0969da" stroke-width="2"/>
+        <text x="260" y="155" text-anchor="middle" font-size="13" font-weight="700" fill="#0969da">Multi-Head Attention</text>
+        <text x="260" y="177" text-anchor="middle" font-size="10" fill="#0969da">GQA (8Q:1KV)  ·  RoPE  ·  Flash Attn  ·  KV Cache</text>
+        <line x1="260" y1="192" x2="260" y2="240" stroke="#57606a" stroke-width="1.5" marker-end="url(#tb-a0)"/>
+        <!-- Add 1 -->
+        <circle cx="260" cy="254" r="14" fill="white" stroke="#0969da" stroke-width="2"/>
+        <text x="260" y="261" text-anchor="middle" font-size="17" font-weight="700" fill="#0969da">+</text>
+        <line x1="260" y1="268" x2="260" y2="286" stroke="#57606a" stroke-width="1.5" marker-end="url(#tb-a0)"/>
+        <!-- Skip 2 right -->
+        <path d="M260,268 H425 V400" stroke="#1a7f37" stroke-width="1.5" stroke-dasharray="5,3" fill="none"/>
+        <line x1="425" y1="400" x2="288" y2="400" stroke="#1a7f37" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#tb-a2)"/>
+        <text x="447" y="340" text-anchor="middle" font-size="10" fill="#1a7f37" transform="rotate(90,447,340)">残差 skip 2</text>
+        <!-- RMSNorm 2 -->
+        <rect x="180" y="286" width="160" height="34" rx="7" fill="white" stroke="#d0d7de" stroke-width="1.5"/>
+        <text x="260" y="308" text-anchor="middle" font-size="12" fill="#57606a">RMSNorm</text>
+        <line x1="260" y1="320" x2="260" y2="336" stroke="#57606a" stroke-width="1.5" marker-end="url(#tb-a0)"/>
+        <!-- FFN -->
+        <rect x="120" y="336" width="280" height="52" rx="8" fill="#f0fdf4" stroke="#1a7f37" stroke-width="2"/>
+        <text x="260" y="358" text-anchor="middle" font-size="13" font-weight="700" fill="#1a7f37">FeedForward / MoE</text>
+        <text x="260" y="378" text-anchor="middle" font-size="10" fill="#1a7f37">SwiGLU: down( SiLU(gate) ⊗ up(x) )  ·  无 bias</text>
+        <line x1="260" y1="388" x2="260" y2="418" stroke="#57606a" stroke-width="1.5" marker-end="url(#tb-a0)"/>
+        <!-- Add 2 -->
+        <circle cx="260" cy="400" r="14" fill="white" stroke="#1a7f37" stroke-width="2"/>
+        <text x="260" y="407" text-anchor="middle" font-size="17" font-weight="700" fill="#1a7f37">+</text>
+        <line x1="260" y1="414" x2="260" y2="448" stroke="#57606a" stroke-width="1.5" marker-end="url(#tb-a0)"/>
+        <!-- Output -->
+        <text x="260" y="466" text-anchor="middle" font-size="12" fill="#57606a">输出 x' ∈ ℝ^[T × 768]（传入下一个 Block）</text>
+        <!-- Layer count -->
+        <text x="40" y="490" font-size="11" fill="#57606a">× 8 层堆叠</text>
+        <rect x="76" y="478" width="368" height="20" rx="4" fill="none" stroke="#d0d7de" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="260" y="491" text-anchor="middle" font-size="10" fill="#57606a">每层独立参数（~12.5M/层）· 梯度通过残差路径直达第0层</text>
+      </svg>
+      <figcaption style="text-align:center;font-size:.75rem;color:#57606a;margin-top:4px">蓝色虚线 = Attention 残差跳跃；绿色虚线 = FFN 残差跳跃。Pre-Norm 保证梯度通路不衰减。</figcaption>
+      </figure>
+
+      <div class="cards">
+        <div class="card">
+          <h4>Pre-Norm（前归一化）</h4>
+          <p>先做 RMSNorm，再做 Attention/FFN。原版 Transformer 是 Post-Norm（先做 Attention 再 Norm）。Pre-Norm 训练更稳定，尤其是深层网络，不容易梯度爆炸。</p>
+        </div>
+        <div class="card">
+          <h4>残差连接（Residual）</h4>
+          <p><code>hidden_states += residual</code>。让梯度直接从深层流回浅层，解决"梯度消失"问题。本质上是"每层只学习增量，而不是重写表示"。ResNet 发明于 2015 年，彻底改变深度学习。</p>
+        </div>
+      </div>
+
+      <div class="diagram">
+input hidden_states [B, T, 768]
+    │
+    ├──── <span class="hl1">residual = hidden_states</span> (保存副本)
+    │
+    ↓
+<span class="hl2">input_layernorm(hidden_states)</span>  ← Pre-Norm
+    ↓
+<span class="hl3">self_attn(...)</span>  → hidden_states, present_kv
+    ↓
+<span class="hl1">hidden_states += residual</span>  ← 第一个残差加
+    │
+    ├──── 新的 residual = hidden_states (自动)
+    │
+    ↓
+<span class="hl2">post_attention_layernorm(hidden_states)</span>  ← Pre-Norm
+    ↓
+<span class="hl3">mlp(...)  </span>  → FFN 或 MoE
+    ↓
+<span class="hl1">hidden_states = hidden_states + mlp_output</span>  ← 第二个残差加
+    │
+output: hidden_states [B, T, 768]  (shape 完全没变！)</div>
+
+      <div class="callout key"><strong>关键认知：</strong>每个 Block 的输入和输出 shape 完全相同（都是 <code>[B, T, hidden_size]</code>）。这就是为什么可以把 N 个 Block 直接串联——每个 Block 只是在原有表示上叠加细微修正。</div>
+
+      <div class="callout why">
+        <strong>Pre-Norm 为什么比 Post-Norm 更稳定？</strong><br>
+        <strong>Post-Norm（GPT-2 风格）</strong>：<code>x = Norm(x + Attn(x))</code>。梯度在反向传播时必须先通过 Norm 层，Norm 的缩放参数 γ 初始化为 1，但训练中可能变小甚至趋近 0。当 γ 很小时，梯度被大幅缩放，深层的梯度传回浅层时几乎消失。<br><br>
+        <strong>Pre-Norm（LLaMA 风格）</strong>：<code>x = x + Attn(Norm(x))</code>。残差流 x 有一条<strong>直接通路</strong>，梯度可以不经过任何 Norm 层直接从第 L 层反向传播到第 0 层。无论网络多深，浅层都能收到有效梯度信号。<br>
+        更深的模型（>12 层）几乎都用 Pre-Norm，这是现代大模型能训练上百层的关键。
+      </div>
+
+      <div class="callout tip">
+        <strong>残差连接的物理意义：</strong><br>
+        <code>x = x + Attn(Norm(x))</code> 这个公式意味着：网络每层只需要学习"差量" Δ = Attn(Norm(x))，而不是完整的变换。<br>
+        · 如果 Attn 输出全 0，x 原样通过（恒等映射），这是最容易学习的情形——这解释了为什么残差网络更容易优化<br>
+        · 第 0 层的信息可以不衰减地传递到任意深度（通过残差流）<br>
+        · 梯度可以从任意深度直接回传到第 0 层，不会消失
+      </div>
+
+      <div class="callout key">
+        <strong>8 层 Block 的分工（经验规律）：</strong><br>
+        · <strong>前 2 层（Block 0-1）</strong>：学习局部语法和词法特征——识别词性、基本词组、标点边界<br>
+        · <strong>中间 4 层（Block 2-5）</strong>：学习语义组合——理解短语含义、实体关系、句子结构<br>
+        · <strong>最后 2 层（Block 6-7）</strong>：学习任务特定的预测模式——根据上下文决定生成什么词<br><br>
+        可以通过实验验证：冻结前 2 层训练（保留局部特征学习），或冻结后 2 层（保留任务特定知识），观察不同冻结策略对模型性能的影响。
+      </div>
+    </div>
+
+    <div class="lesson-section" id="s8" data-start="196" data-end="232">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L196–232</span></div>
+      <h2 class="section-title">MiniMindModel — 完整的 Transformer 主干</h2>
+      <p class="section-lead">把所有组件串联起来：Token → Embedding → N 层 Block → 最终 RMSNorm → hidden_states。</p>
+
+      <div class="diagram">
+<span class="hl1">输入：</span> input_ids [B, T]  (整数，值在 [0, vocab_size) 范围内)
+    ↓
+<span class="hl2">embed_tokens</span>: Embedding(6400, 768)
+  每个 token id 查表，得到 768 维向量
+  → hidden_states [B, T, 768]
+    ↓
+<span class="hl2">dropout</span>  (训练时随机 mask，推理时跳过)
+    ↓
+<span class="hl1">预计算 RoPE：</span>
+  position_embeddings = (freqs_cos[start_pos:start_pos+T],
+                         freqs_sin[start_pos:start_pos+T])
+    ↓
+┌──────────────────────────────────────────────────────┐
+│  Block 0: Attention + FFN                            │
+│  Block 1: Attention + FFN                            │
+│  ...                                                 │
+│  Block 7: Attention + FFN                            │
+│  每层收集 present_kv，组成 presents 列表              │
+└──────────────────────────────────────────────────────┘
+    ↓
+<span class="hl2">norm</span>: 最终 RMSNorm
+    ↓
+<span class="hl3">返回</span>: hidden_states [B, T, 768], presents (KV Cache), aux_loss</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>start_pos（KV Cache 位置）</h4>
+          <p>推理时，<code>start_pos = past_kvs[0][0].shape[1]</code>，即已缓存的 token 数量。用这个值从 <code>freqs_cos</code> 里取正确位置的 RoPE 旋转角，确保位置编码连续。</p>
+        </div>
+        <div class="card">
+          <h4>register_buffer</h4>
+          <p><code>self.register_buffer("freqs_cos", ...)</code> 把预计算的 cos/sin 注册为模型的"缓冲区"——不是参数（不更新梯度），但会随 model.to(device) 自动移动到 GPU，并在 state_dict 中序列化。</p>
+        </div>
+        <div class="card">
+          <h4>aux_loss 累积</h4>
+          <p>遍历所有 MoE 层，把每层的 <code>mlp.aux_loss</code> 加起来。这个 loss 会被传到 ForCausalLM，再加到总 loss 里参与反向传播。</p>
+        </div>
+        <div class="card">
+          <h4>RoPE buffer 重计算</h4>
+          <p>L216–218 的特殊处理：用 <code>transformers≥5.x</code> 的 meta device 初始化时，buffer 可能丢失（全 0）。检测到后重新计算。</p>
+        </div>
+      </div>
+
+      <div class="callout why">
+        <strong>register_buffer vs nn.Parameter 的区别：</strong><br>
+        <code>nn.Parameter</code>：会出现在 <code>optimizer.param_groups</code> 中，参与梯度计算和参数更新，在 <code>model.parameters()</code> 中可见。<br>
+        <code>register_buffer</code>：不参与梯度更新，不出现在 <code>model.parameters()</code> 中，但会随 <code>model.to(device)</code> 自动移动到正确的 device，并在 <code>state_dict</code> 中序列化保存。<br><br>
+        RoPE 的 cos/sin 缓存是固定的数学表（由 rope_theta 和序列长度唯一确定），不需要学习，用 <code>register_buffer</code> 可以让它们：①随模型一起 <code>save_pretrained</code> / <code>from_pretrained</code>，②推理时自动在正确 device 上，③不占用优化器状态的显存。
+      </div>
+
+      <div class="callout tip">
+        <strong>start_pos 的作用：</strong><br>
+        在 KV Cache 推理模式下，每次只输入 1 个新 token，但 RoPE 需要知道这个 token 在序列中的绝对位置。<br>
+        <code>start_pos = past_kvs[0][0].shape[1]</code>（已缓存的 token 数量），然后取 <code>freqs_cos[start_pos : start_pos+T]</code>。<br>
+        这保证位置编码的连续性：prefill 阶段 token 0~N-1 获得正确的旋转角，decode 阶段每个新 token 获得正确的位置 N, N+1, N+2, ...
+      </div>
+
+      <div class="callout warn">
+        <strong>DDP 与 checkpoint 加载顺序陷阱：</strong><br>
+        必须先 <code>load_state_dict</code>，再用 DDP 包装模型。<br>
+        原因：DDP（DistributedDataParallel）会给所有参数名加上 <code>module.</code> 前缀（如 <code>attn.qkv</code> 变成 <code>module.attn.qkv</code>）。<br>
+        如果先 DDP 再加载，原来保存的 state_dict（没有 <code>module.</code> 前缀）会与模型的参数名不匹配，<code>strict=True</code> 时直接报错，<code>strict=False</code> 时所有参数都加载失败，模型相当于随机初始化。<br>
+        正确顺序：<code>model = MiniMindForCausalLM(config)</code> → <code>model.load_state_dict(...)</code> → <code>model = DDP(model)</code>
+      </div>
+    </div>
+
+    <div class="lesson-section" id="s9" data-start="234" data-end="253">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L234–253</span></div>
+      <h2 class="section-title">MiniMindForCausalLM — 语言模型头 + 训练损失</h2>
+      <p class="section-lead">在 MiniMindModel 之上加一个线性层（lm_head），把 hidden_states 映射到词表概率，计算下一个 token 的预测损失。</p>
+
+      <div class="callout why"><strong>语言模型的学习目标：</strong>给定 token 序列 [t₁, t₂, ..., tₙ]，模型预测每个位置的下一个 token。损失 = <code>cross_entropy(logit[t], target[t+1])</code>。这叫"下一个 token 预测"，是现代 LLM 通用的预训练目标。</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>lm_head = Linear(768, 6400, bias=False)</h4>
+          <p>把每个位置的 768 维 hidden state 线性投影到 6400 维（词表大小）。输出叫 logits，softmax 后是每个词的概率。注意没有 bias。</p>
+        </div>
+        <div class="card">
+          <h4>权重共享（tie_word_embeddings）</h4>
+          <p>L242：<code>self.model.embed_tokens.weight = self.lm_head.weight</code>。Embedding 矩阵和 lm_head 矩阵共享同一份参数。直觉：一个 token 的输入向量和它的预测向量应该在同一个语义空间里。节省 6400×768 ≈ 5M 参数。</p>
+        </div>
+        <div class="card">
+          <h4>交叉熵损失 L250–252</h4>
+          <p><code>x = logits[..., :-1, :]</code>（去掉最后一个预测）<br><code>y = labels[..., 1:]</code>（去掉第一个标签）<br>这是"右移对齐"：位置 i 的 logit 对应位置 i+1 的标签（预测下一个）。</p>
+        </div>
+        <div class="card">
+          <h4>ignore_index = -100</h4>
+          <p>被 mask 掉的位置（prompt 部分、padding）的 label 设为 -100，交叉熵自动忽略这些位置，不计算 loss。这是 SFT 的核心技术。</p>
+        </div>
+      </div>
+
+      <div class="callout tip"><strong>logits_to_keep 优化：</strong>L247–248，只对最后 N 个 token 计算 logits。推理时只需要最后 1 个 token 的 logits，可以节省大量计算。</div>
+
+      <div class="callout why">
+        <strong>ignore_index=-100 的数学原理：</strong><br>
+        PyTorch 的 <code>cross_entropy(logits, labels, ignore_index=-100)</code> 在计算时，对 label=-100 的位置完全跳过：分子（被预测 token 的 log 概率）和分母（损失的归一化分母）都不包含这些位置。<br><br>
+        这使得提示词（Prompt）部分的 token 不参与梯度计算——模型只从"回答"部分学习如何生成。这是 SFT（监督微调）的核心技术：把 prompt 对应的 label 设为 -100，让模型专注于学习从 prompt 推导出正确 response 的能力，而不是死记 prompt 内容。
+      </div>
+
+      <div class="formula">Loss = -1/|答案tokens| × Σ_{t ∈ 答案} log P(yₜ | y₁,...,yₜ₋₁)  ← 只在 label≠-100 的位置求平均</div>
+
+      <div class="callout tip">
+        <strong>logits_to_keep 的计算节省：</strong><br>
+        <code>lm_head</code> 是一个 <code>[hidden_size, vocab_size] = [768, 6400]</code> 的矩阵乘法。如果 seq_len=2048，完整计算需要 <code>2048 × 768 × 6400</code> 次浮点运算。<br>
+        推理时只需要最后 1 个 token 的 logits（用于采样下一个 token），设置 <code>logits_to_keep=1</code> 后只做 <code>1 × 768 × 6400</code> 的矩阵乘法，<strong>节省 2047/2048 ≈ 99.95%</strong> 的 lm_head 计算量。在长上下文推理中收益极大。
+      </div>
+
+      <div class="callout key">
+        <strong>权重绑定（weight tying）的梯度流：</strong><br>
+        <code>lm_head.weight</code> 和 <code>embed_tokens.weight</code> 共享同一个内存地址（不是复制，是同一个张量）。<br>
+        反向传播时，来自 lm_head 的梯度（"预测错了哪个词"）和来自 embedding 查找的梯度（"哪个词被输入"）叠加在同一个矩阵上，使得词嵌入空间和输出预测空间保持一致——一个词的"输入表示"和"输出预测向量"应该编码相同的语义，这个约束通过共享参数被天然满足。
+      </div>
+    </div>
+
+    <div class="lesson-section" id="s10" data-start="256" data-end="287">
+      <div class="section-label"><span class="file-badge">model_minimind.py</span><span class="lines-badge">L256–287</span></div>
+      <h2 class="section-title">generate() — 自回归生成的完整实现</h2>
+      <p class="section-lead">这是推理的核心：用训练好的模型，逐个 token 地生成文本。理解采样策略，你才能控制模型的输出风格。</p>
+
+      <div class="diagram">
+<span class="hl1">generate() 主循环：</span>
+
+初始: input_ids = prompt tokens  [B, prompt_len]
+      finished = [False, False, ...]
+
+loop (最多 max_new_tokens 次):
+  1. forward(input_ids[:, past_len:], past_key_values)
+     → 利用 KV Cache，只送新 token
+     → logits [B, 1, vocab_size]
+
+  2. logits = logits[:, -1, :] / <span class="hl2">temperature</span>
+     → 取最后一个位置 → [B, vocab_size]
+     → 温度缩放
+
+  3. <span class="hl2">repetition_penalty</span>：已出现词降分
+
+  4. <span class="hl2">top_k</span>：只保留最高 k 个词，其余 -inf
+
+  5. <span class="hl2">top_p</span>（nucleus sampling）：
+     累计概率 > p 的词截掉
+
+  6. next_token = multinomial(softmax(logits))
+     → 从概率分布采样 1 个 token
+
+  7. input_ids = cat([input_ids, next_token])
+
+  8. 如果 next_token == eos: finished[i] = True
+
+  9. 如果全部 finished: break</div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>temperature（温度）</h4>
+          <p><code>logits / temperature</code>。<br>temperature → 0：越来越确定性（总选最大概率）<br>temperature = 1：按原分布采样<br>temperature > 1：更随机多样（趋向均匀分布）<br><br>默认 0.85，略有随机性。</p>
+        </div>
+        <div class="card">
+          <h4>top_k 采样</h4>
+          <p>保留概率最高的 k=50 个词，其余设为 -∞。<br>防止模型选到极低概率的怪词，同时保留多样性。<br>如果 k=1 等同于 greedy decoding。</p>
+        </div>
+        <div class="card">
+          <h4>top_p（核采样）</h4>
+          <p>对所有词按概率降序排，累加到 p=0.85 就截断。比 top_k 更自适应：分布集中时（模型很确定）保留少数几个词，分布平坦时保留更多。</p>
+        </div>
+        <div class="card">
+          <h4>repetition_penalty</h4>
+          <p>对已出现过的 token，分数 > 0 时除以 rp，分数 < 0 时乘以 rp。rp > 1 降低重复概率，rp = 1.0 无效果。防止模型一直重复说同一句话。</p>
+        </div>
+        <div class="card">
+          <h4>@torch.inference_mode()</h4>
+          <p>推理时不需要计算梯度。这个装饰器比 <code>no_grad()</code> 更激进——完全禁止梯度追踪，节省约 20% 内存，速度更快。</p>
+        </div>
+        <div class="card">
+          <h4>KV Cache 的使用</h4>
+          <p>L264–265：<code>past_len = past_kvs[0][0].shape[1]</code>，每步只送 <code>input_ids[:, past_len:]</code>（新 token）而不是完整序列。随着生成，每步的 forward 计算量是 O(1) 而不是 O(T²)。</p>
+        </div>
+      </div>
+
+      <div class="callout tip"><strong>练习：</strong>修改 temperature 为 0.1（贪婪）和 2.0（极随机），对比同一个 prompt 的输出。这直观展示了采样参数的作用。</div>
+
+      <div class="callout why">
+        <strong>温度采样的数学原理：</strong><br>
+        <code>logits / T</code> 等价于在 softmax 之前缩放每个 logit。设最高 logit 为 a，第二高为 b（a &gt; b）：<br>
+        · T → 0：<code>(a-b)/T → ∞</code>，softmax 变成 argmax，始终选最大概率（贪心解码）<br>
+        · T = 1：原始分布，按模型训练时学到的概率采样<br>
+        · T → ∞：所有 logit 除以大数后趋近相同，softmax 趋向均匀分布（完全随机）<br><br>
+        实践中：<strong>创意写作</strong> T=0.8–1.2，<strong>代码/数学</strong> T=0–0.3（需要精确性），<strong>对话</strong> T=0.5–0.8（流畅但确定）。
+      </div>
+
+      <div class="formula">Nucleus sampling（top_p）：找最小集合 V* 使得 Σ_{v∈V*} P(v) ≥ p，从 V* 中采样。top_p=0.9 意味着"每次只从累计概率 90% 的候选词中选"，自动适应词汇量的宽窄。</div>
+
+      <div class="callout tip">
+        <strong>重复惩罚（repetition_penalty）公式：</strong><br>
+        对于已经在生成序列中出现过的 token t：<br>
+        · 如果 <code>logit[t] &gt; 0</code>：<code>logit[t] /= rp</code>（降低正分数，降低概率）<br>
+        · 如果 <code>logit[t] &lt; 0</code>：<code>logit[t] *= rp</code>（使负分数更负，进一步降低概率）<br><br>
+        rp=1.0 无效果；rp=1.3 明显减少重复（适合大多数场景）；rp&gt;1.5 可能强制模型不断引入新词，导致偏离主题甚至语言不连贯。建议从 rp=1.1 开始调试。
+      </div>
+
+      <div class="callout warn">
+        <strong>常见错误：生成前忘记 model.eval()</strong><br>
+        训练模式（<code>model.train()</code>）下：<br>
+        · Dropout 仍然随机激活，每次推理结果不可重现，且质量下降<br>
+        · BatchNorm（如果有）使用 batch 统计而非运行统计，batch_size=1 时行为异常<br>
+        · 梯度追踪仍然开启，消耗额外显存<br><br>
+        正确的推理前准备：<code>model.eval()</code>（关闭 dropout 和 batchnorm 的训练行为）+ <code>torch.no_grad()</code> 或 <code>@torch.inference_mode()</code>（关闭梯度追踪）。<code>inference_mode</code> 比 <code>no_grad</code> 更激进，完全禁用自动求导引擎，推理速度约快 5–10%。
+      </div>
+    </div>
+
+    <div class="section-nav">
+      <a href="index.html">← 返回目录</a>
+      <a href="ch2-training.html">下一章：训练流水线 →</a>
+    </div>
+
+  </div><!-- lesson-panel -->
+</div><!-- split -->
+
+<script>
+// ============ RAW SOURCE CODE ============
+const CODE = `import math, torch, torch.nn.functional as F
+from torch import nn
+from transformers.activations import ACT2FN
+from transformers import PreTrainedModel, GenerationMixin, PretrainedConfig
+from transformers.modeling_outputs import MoeCausalLMOutputWithPast
+
+# 🌏🌎🌍  MiniMind Config
+class MiniMindConfig(PretrainedConfig):
+    model_type = "minimind"
+    def __init__(self, hidden_size=768, num_hidden_layers=8, use_moe=False, **kwargs):
+        super().__init__(**kwargs)
+        self.hidden_size = hidden_size
+        self.num_hidden_layers = num_hidden_layers
+        self.use_moe = use_moe
+        self.dropout = kwargs.get("dropout", 0.0)
+        self.vocab_size = kwargs.get("vocab_size", 6400)
+        self.bos_token_id = kwargs.get("bos_token_id", 1)
+        self.eos_token_id = kwargs.get("eos_token_id", 2)
+        self.flash_attn = kwargs.get("flash_attn", True)
+        self.num_attention_heads = kwargs.get("num_attention_heads", 8)
+        self.num_key_value_heads = kwargs.get("num_key_value_heads", 4)
+        self.head_dim = kwargs.get("head_dim", self.hidden_size // self.num_attention_heads)
+        self.hidden_act = kwargs.get("hidden_act", 'silu')
+        self.intermediate_size = kwargs.get("intermediate_size", math.ceil(hidden_size * math.pi / 64) * 64)
+        self.max_position_embeddings = kwargs.get("max_position_embeddings", 32768)
+        self.rms_norm_eps = kwargs.get("rms_norm_eps", 1e-6)
+        self.rope_theta = kwargs.get("rope_theta", 1e6)
+        self.tie_word_embeddings = kwargs.get("tie_word_embeddings", True)
+        self.inference_rope_scaling = kwargs.get("inference_rope_scaling", False)
+        self.rope_scaling = {
+            "beta_fast": 32,
+            "beta_slow": 1,
+            "factor": 16,
+            "original_max_position_embeddings": 2048,
+            "attention_factor": 1.0,
+            "type": "yarn"
+        } if self.inference_rope_scaling else None
+        ### MoE specific configs (ignored if use_moe = False)
+        self.num_experts = kwargs.get("num_experts", 4)
+        self.num_experts_per_tok = kwargs.get("num_experts_per_tok", 1)
+        self.moe_intermediate_size = kwargs.get("moe_intermediate_size", self.intermediate_size)
+        self.norm_topk_prob = kwargs.get("norm_topk_prob", True)
+        self.router_aux_loss_coef = kwargs.get("router_aux_loss_coef", 5e-4)
+
+# 🌏🌎🌍  MiniMind Model
+class RMSNorm(torch.nn.Module):
+    def __init__(self, dim: int, eps: float = 1e-5):
+        super().__init__()
+        self.eps = eps
+        self.weight = nn.Parameter(torch.ones(dim))
+
+    def norm(self, x):
+        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+
+    def forward(self, x):
+        return (self.weight * self.norm(x.float())).type_as(x)
+
+def precompute_freqs_cis(dim: int, end: int = int(32 * 1024), rope_base: float = 1e6, rope_scaling: dict = None):
+    freqs, attn_factor = 1.0 / (rope_base ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim)), 1.0
+    if rope_scaling is not None: # YaRN
+        orig_max, factor, beta_fast, beta_slow, attn_factor = (
+            rope_scaling.get("original_max_position_embeddings", 2048), rope_scaling.get("factor", 16),
+            rope_scaling.get("beta_fast", 32.0), rope_scaling.get("beta_slow", 1.0), rope_scaling.get("attention_factor", 1.0)
+        )
+        if end / orig_max > 1.0:
+            inv_dim = lambda b: (dim * math.log(orig_max / (b * 2 * math.pi))) / (2 * math.log(rope_base))
+            low, high = max(math.floor(inv_dim(beta_fast)), 0), min(math.ceil(inv_dim(beta_slow)), dim // 2 - 1)
+            ramp = torch.clamp((torch.arange(dim // 2, device=freqs.device).float() - low) / max(high - low, 0.001), 0, 1)
+            freqs = freqs * (1 - ramp + ramp / factor)
+    t = torch.arange(end, device=freqs.device)
+    freqs = torch.outer(t, freqs).float()
+    freqs_cos = torch.cat([torch.cos(freqs), torch.cos(freqs)], dim=-1) * attn_factor
+    freqs_sin = torch.cat([torch.sin(freqs), torch.sin(freqs)], dim=-1) * attn_factor
+    return freqs_cos, freqs_sin
+
+def apply_rotary_pos_emb(q, k, cos, sin, unsqueeze_dim=1):
+    def rotate_half(x): return torch.cat((-x[..., x.shape[-1] // 2:], x[..., : x.shape[-1] // 2]), dim=-1)
+    q_embed = ((q * cos.unsqueeze(unsqueeze_dim)) + (rotate_half(q) * sin.unsqueeze(unsqueeze_dim))).to(q.dtype)
+    k_embed = ((k * cos.unsqueeze(unsqueeze_dim)) + (rotate_half(k) * sin.unsqueeze(unsqueeze_dim))).to(k.dtype)
+    return q_embed, k_embed
+
+def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
+    bs, slen, num_key_value_heads, head_dim = x.shape
+    if n_rep == 1: return x
+    return (x[:, :, :, None, :].expand(bs, slen, num_key_value_heads, n_rep, head_dim).reshape(bs, slen, num_key_value_heads * n_rep, head_dim))
+
+class Attention(nn.Module):
+    def __init__(self, config: MiniMindConfig):
+        super().__init__()
+        self.num_key_value_heads = config.num_attention_heads if config.num_key_value_heads is None else config.num_key_value_heads
+        self.n_local_heads = config.num_attention_heads
+        self.n_local_kv_heads = self.num_key_value_heads
+        self.n_rep = self.n_local_heads // self.n_local_kv_heads
+        self.head_dim = config.head_dim
+        self.is_causal = True
+        self.q_proj = nn.Linear(config.hidden_size, config.num_attention_heads * self.head_dim, bias=False)
+        self.k_proj = nn.Linear(config.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
+        self.v_proj = nn.Linear(config.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
+        self.o_proj = nn.Linear(config.num_attention_heads * self.head_dim, config.hidden_size, bias=False)
+        self.q_norm = RMSNorm(self.head_dim, eps=config.rms_norm_eps)
+        self.k_norm = RMSNorm(self.head_dim, eps=config.rms_norm_eps)
+        self.attn_dropout = nn.Dropout(config.dropout)
+        self.resid_dropout = nn.Dropout(config.dropout)
+        self.dropout = config.dropout
+        self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention') and config.flash_attn
+
+    def forward(self, x, position_embeddings, past_key_value=None, use_cache=False, attention_mask=None):
+        bsz, seq_len, _ = x.shape
+        xq, xk, xv = self.q_proj(x), self.k_proj(x), self.v_proj(x)
+        xq = xq.view(bsz, seq_len, self.n_local_heads, self.head_dim)
+        xk = xk.view(bsz, seq_len, self.n_local_kv_heads, self.head_dim)
+        xv = xv.view(bsz, seq_len, self.n_local_kv_heads, self.head_dim)
+        xq, xk = self.q_norm(xq), self.k_norm(xk)
+        cos, sin = position_embeddings
+        xq, xk = apply_rotary_pos_emb(xq, xk, cos, sin)
+        if past_key_value is not None:
+            xk = torch.cat([past_key_value[0], xk], dim=1)
+            xv = torch.cat([past_key_value[1], xv], dim=1)
+        past_kv = (xk, xv) if use_cache else None
+        xq, xk, xv = (xq.transpose(1, 2), repeat_kv(xk, self.n_rep).transpose(1, 2), repeat_kv(xv, self.n_rep).transpose(1, 2))
+        if self.flash and (seq_len > 1) and (not self.is_causal or past_key_value is None) and (attention_mask is None or torch.all(attention_mask == 1)):
+            output = F.scaled_dot_product_attention(xq, xk, xv, dropout_p=self.dropout if self.training else 0.0, is_causal=self.is_causal)
+        else:
+            scores = (xq @ xk.transpose(-2, -1)) / math.sqrt(self.head_dim)
+            if self.is_causal: scores[:, :, :, -seq_len:] += torch.full((seq_len, seq_len), float("-inf"), device=scores.device).triu(1)
+            if attention_mask is not None: scores += (1.0 - attention_mask.unsqueeze(1).unsqueeze(2)) * -1e9
+            output = self.attn_dropout(F.softmax(scores.float(), dim=-1).type_as(xq)) @ xv
+        output = output.transpose(1, 2).reshape(bsz, seq_len, -1)
+        output = self.resid_dropout(self.o_proj(output))
+        return output, past_kv
+
+class FeedForward(nn.Module):
+    def __init__(self, config: MiniMindConfig, intermediate_size: int = None):
+        super().__init__()
+        intermediate_size = intermediate_size or config.intermediate_size
+        self.gate_proj = nn.Linear(config.hidden_size, intermediate_size, bias=False)
+        self.down_proj = nn.Linear(intermediate_size, config.hidden_size, bias=False)
+        self.up_proj = nn.Linear(config.hidden_size, intermediate_size, bias=False)
+        self.act_fn = ACT2FN[config.hidden_act]
+
+    def forward(self, x):
+        return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+
+class MOEFeedForward(nn.Module):
+    def __init__(self, config: MiniMindConfig):
+        super().__init__()
+        self.config = config
+        self.gate = nn.Linear(config.hidden_size, config.num_experts, bias=False)
+        self.experts = nn.ModuleList([FeedForward(config, intermediate_size=config.moe_intermediate_size) for _ in range(config.num_experts)])
+        self.act_fn = ACT2FN[config.hidden_act]
+
+    def forward(self, x):
+        batch_size, seq_len, hidden_dim = x.shape
+        x_flat = x.view(-1, hidden_dim)
+        scores = F.softmax(self.gate(x_flat), dim=-1)
+        topk_weight, topk_idx = torch.topk(scores, k=self.config.num_experts_per_tok, dim=-1, sorted=False)
+        if self.config.norm_topk_prob: topk_weight = topk_weight / (topk_weight.sum(dim=-1, keepdim=True) + 1e-20)
+        y = torch.zeros_like(x_flat)
+        for i, expert in enumerate(self.experts):
+            mask = (topk_idx == i)
+            if mask.any():
+                token_idx = mask.any(dim=-1).nonzero().flatten()
+                weight = topk_weight[mask].view(-1, 1)
+                y.index_add_(0, token_idx, (expert(x_flat[token_idx]) * weight).to(y.dtype))
+            elif self.training:
+                y[0, 0] += 0 * sum(p.sum() for p in expert.parameters())
+        if self.training and self.config.router_aux_loss_coef > 0:
+            load = F.one_hot(topk_idx, self.config.num_experts).float().mean(0)
+            self.aux_loss = (load * scores.mean(0)).sum() * self.config.num_experts * self.config.router_aux_loss_coef
+        else:
+            self.aux_loss = scores.new_zeros(1).squeeze()
+        return y.view(batch_size, seq_len, hidden_dim)
+
+class MiniMindBlock(nn.Module):
+    def __init__(self, layer_id: int, config: MiniMindConfig):
+        super().__init__()
+        self.self_attn = Attention(config)
+        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.mlp = FeedForward(config) if not config.use_moe else MOEFeedForward(config)
+
+    def forward(self, hidden_states, position_embeddings, past_key_value=None, use_cache=False, attention_mask=None):
+        residual = hidden_states
+        hidden_states, present_key_value = self.self_attn(
+            self.input_layernorm(hidden_states), position_embeddings,
+            past_key_value, use_cache, attention_mask
+        )
+        hidden_states += residual
+        hidden_states = hidden_states + self.mlp(self.post_attention_layernorm(hidden_states))
+        return hidden_states, present_key_value
+
+class MiniMindModel(nn.Module):
+    def __init__(self, config: MiniMindConfig):
+        super().__init__()
+        self.config = config
+        self.vocab_size, self.num_hidden_layers = config.vocab_size, config.num_hidden_layers
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size)
+        self.dropout = nn.Dropout(config.dropout)
+        self.layers = nn.ModuleList([MiniMindBlock(l, config) for l in range(self.num_hidden_layers)])
+        self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        freqs_cos, freqs_sin = precompute_freqs_cis(dim=config.head_dim, end=config.max_position_embeddings, rope_base=config.rope_theta, rope_scaling=config.rope_scaling)
+        self.register_buffer("freqs_cos", freqs_cos, persistent=False)
+        self.register_buffer("freqs_sin", freqs_sin, persistent=False)
+
+    def forward(self, input_ids, attention_mask=None, past_key_values=None, use_cache=False, **kwargs):
+        batch_size, seq_length = input_ids.shape
+        if hasattr(past_key_values, 'layers'): past_key_values = None
+        past_key_values = past_key_values or [None] * len(self.layers)
+        start_pos = past_key_values[0][0].shape[1] if past_key_values[0] is not None else 0
+        hidden_states = self.dropout(self.embed_tokens(input_ids))
+        if self.freqs_cos[0, 0] == 0:
+            freqs_cos, freqs_sin = precompute_freqs_cis(dim=self.config.head_dim, end=self.config.max_position_embeddings, rope_base=self.config.rope_theta, rope_scaling=self.config.rope_scaling)
+            self.freqs_cos, self.freqs_sin = freqs_cos.to(hidden_states.device), freqs_sin.to(hidden_states.device)
+        position_embeddings = (self.freqs_cos[start_pos:start_pos + seq_length], self.freqs_sin[start_pos:start_pos + seq_length])
+        presents = []
+        for layer, past_key_value in zip(self.layers, past_key_values):
+            hidden_states, present = layer(
+                hidden_states, position_embeddings,
+                past_key_value=past_key_value, use_cache=use_cache, attention_mask=attention_mask
+            )
+            presents.append(present)
+        hidden_states = self.norm(hidden_states)
+        aux_loss = sum([l.mlp.aux_loss for l in self.layers if isinstance(l.mlp, MOEFeedForward)], hidden_states.new_zeros(1).squeeze())
+        return hidden_states, presents, aux_loss
+
+class MiniMindForCausalLM(PreTrainedModel, GenerationMixin):
+    config_class = MiniMindConfig
+    _tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"}
+    def __init__(self, config: MiniMindConfig = None):
+        self.config = config or MiniMindConfig()
+        super().__init__(self.config)
+        self.model = MiniMindModel(self.config)
+        self.lm_head = nn.Linear(self.config.hidden_size, self.config.vocab_size, bias=False)
+        if self.config.tie_word_embeddings: self.model.embed_tokens.weight = self.lm_head.weight
+        self.post_init()
+
+    def forward(self, input_ids, attention_mask=None, past_key_values=None, use_cache=False, logits_to_keep=0, labels=None, **kwargs):
+        hidden_states, past_key_values, aux_loss = self.model(input_ids, attention_mask, past_key_values, use_cache, **kwargs)
+        slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
+        logits = self.lm_head(hidden_states[:, slice_indices, :])
+        loss = None
+        if labels is not None:
+            x, y = logits[..., :-1, :].contiguous(), labels[..., 1:].contiguous()
+            loss = F.cross_entropy(x.view(-1, x.size(-1)), y.view(-1), ignore_index=-100)
+        return MoeCausalLMOutputWithPast(loss=loss, aux_loss=aux_loss, logits=logits, past_key_values=past_key_values, hidden_states=hidden_states)
+
+    @torch.inference_mode()
+    def generate(self, inputs=None, attention_mask=None, max_new_tokens=8192, temperature=0.85, top_p=0.85, top_k=50, eos_token_id=2, streamer=None, use_cache=True, num_return_sequences=1, do_sample=True, repetition_penalty=1.0, **kwargs):
+        input_ids = kwargs.pop("input_ids", inputs).repeat(num_return_sequences, 1)
+        attention_mask = attention_mask.repeat(num_return_sequences, 1) if attention_mask is not None else None
+        past_key_values = kwargs.pop("past_key_values", None)
+        finished = torch.zeros(input_ids.shape[0], dtype=torch.bool, device=input_ids.device)
+        if streamer: streamer.put(input_ids.cpu())
+        for _ in range(max_new_tokens):
+            past_len = past_key_values[0][0].shape[1] if past_key_values else 0
+            outputs = self.forward(input_ids[:, past_len:], attention_mask, past_key_values, use_cache=use_cache, **kwargs)
+            attention_mask = torch.cat([attention_mask, attention_mask.new_ones(attention_mask.shape[0], 1)], -1) if attention_mask is not None else None
+            logits = outputs.logits[:, -1, :] / temperature
+            if repetition_penalty != 1.0:
+                for i in range(input_ids.shape[0]):
+                    seen = torch.unique(input_ids[i]); score = logits[i, seen]; logits[i, seen] = torch.where(score > 0, score / repetition_penalty, score * repetition_penalty)
+            if top_k > 0:
+                logits[logits < torch.topk(logits, top_k)[0][..., -1, None]] = -float('inf')
+            if top_p < 1.0:
+                sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+                mask = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1) > top_p
+                mask[..., 1:], mask[..., 0] = mask[..., :-1].clone(), 0
+                logits[mask.scatter(1, sorted_indices, mask)] = -float('inf')
+            next_token = torch.multinomial(torch.softmax(logits, dim=-1), num_samples=1) if do_sample else torch.argmax(logits, dim=-1, keepdim=True)
+            if eos_token_id is not None: next_token = torch.where(finished.unsqueeze(-1), next_token.new_full((next_token.shape[0], 1), eos_token_id), next_token)
+            input_ids = torch.cat([input_ids, next_token], dim=-1)
+            past_key_values = outputs.past_key_values if use_cache else None
+            if streamer: streamer.put(next_token.cpu())
+            if eos_token_id is not None:
+                finished |= next_token.squeeze(-1).eq(eos_token_id)
+                if finished.all(): break
+        if streamer: streamer.end()
+        if kwargs.get("return_kv"): return {'generated_ids': input_ids, 'past_kv': past_key_values}
+        return input_ids`;
+
+// ============ TOC DEFINITION ============
+const TOC = [
+  {id:'s0', label:'文件概览', start:1, end:9},
+  {id:'s1', label:'MiniMindConfig', start:10, end:45},
+  {id:'s2', label:'RMSNorm', start:50, end:60},
+  {id:'s3', label:'RoPE 位置编码', start:62, end:84},
+  {id:'s4', label:'Attention + GQA', start:86, end:134},
+  {id:'s5', label:'FeedForward / SwiGLU', start:136, end:146},
+  {id:'s6', label:'MOE FeedForward', start:148, end:176},
+  {id:'s7', label:'MiniMindBlock', start:178, end:194},
+  {id:'s8', label:'MiniMindModel', start:196, end:232},
+  {id:'s9', label:'ForCausalLM', start:234, end:253},
+  {id:'s10', label:'generate()', start:256, end:287},
+];
+
+// ============ SYNTAX HIGHLIGHTER ============
+function highlight(raw) {
+  const phs = {};
+  let pid = 0;
+  function ph(str, cls) {
+    const k = '\x01'+pid+'\x01'; pid++;
+    phs[k] = '<span class="'+cls+'">'+str+'</span>';
+    return k;
+  }
+  // strings first
+  raw = raw.replace(/("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, m =>
+    ph(m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),'str'));
+  // comments
+  raw = raw.replace(/(#[^\n]*)/g, m =>
+    ph(m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),'cmt'));
+  // escape
+  raw = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // decorators
+  raw = raw.replace(/@([A-Za-z_.]+)/g, (_,n)=>'<span class="dec">@'+n+'</span>');
+  // keywords
+  raw = raw.replace(/\b(def|class|import|from|return|if|else|elif|for|while|with|as|not|in|and|or|True|False|None|pass|break|continue|raise|try|except|finally|lambda|yield|global|nonlocal|super)\b/g,
+    '<span class="kw">$1</span>');
+  // self
+  raw = raw.replace(/\b(self)\b/g, '<span class="slf">self</span>');
+  // builtins
+  raw = raw.replace(/\b(print|len|range|zip|enumerate|list|dict|set|tuple|int|float|str|bool|sum|max|min|hasattr|isinstance|getattr|setattr|type|repr|next|iter|any|all)\b/g,
+    '<span class="blt">$1</span>');
+  // class names
+  raw = raw.replace(/\b([A-Z][A-Za-z0-9_]+)\b/g, '<span class="cls">$1</span>');
+  // numbers
+  raw = raw.replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g,'<span class="num">$1</span>');
+  // restore
+  for(const [k,v] of Object.entries(phs)) raw = raw.split(k).join(v);
+  return raw;
+}
+
+// ============ RENDER CODE ============
+const lines = CODE.split('\n');
+const tbody = document.getElementById('codeBody');
+lines.forEach((line, i) => {
+  const n = i+1;
+  const tr = document.createElement('tr');
+  tr.id = 'L'+n;
+  tr.innerHTML = `<td class="ln">${n}</td><td class="lc">${highlight(line)||' '}</td>`;
+  tbody.appendChild(tr);
+});
+
+// ============ RENDER TOC ============
+const tocEl = document.getElementById('toc');
+TOC.forEach(item => {
+  const a = document.createElement('a');
+  a.className = 'toc-item';
+  a.textContent = item.label;
+  a.dataset.id = item.id;
+  a.onclick = () => {
+    document.getElementById(item.id).scrollIntoView({behavior:'smooth'});
+  };
+  tocEl.appendChild(a);
+});
+
+// ============ SCROLL SYNC ============
+let currentSection = null;
+function activateLines(start, end) {
+  if(currentSection === start+'-'+end) return;
+  currentSection = start+'-'+end;
+  document.querySelectorAll('.code-table tr.hl-active').forEach(r=>r.classList.remove('hl-active'));
+  for(let i=start; i<=end && i<=lines.length; i++) {
+    const row = document.getElementById('L'+i);
+    if(row) row.classList.add('hl-active');
+  }
+  const target = document.getElementById('L'+start);
+  if(target) {
+    const panel = document.getElementById('codePanel');
+    const offset = target.offsetTop - panel.clientHeight * 0.25;
+    panel.scrollTo({top: Math.max(0, offset), behavior:'smooth'});
+  }
+  document.getElementById('lineInfo').textContent = 'L'+start+' – '+end;
+  // update TOC
+  document.querySelectorAll('.toc-item').forEach(a=>a.classList.remove('active'));
+  const found = TOC.find(t=>t.start===start);
+  if(found) {
+    const tocItem = tocEl.querySelector('[data-id="'+found.id+'"]');
+    if(tocItem) tocItem.classList.add('active');
+  }
+}
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting && entry.intersectionRatio > 0.1) {
+      const sec = entry.target;
+      sec.classList.add('in-view');
+      const s = parseInt(sec.dataset.start);
+      const e = parseInt(sec.dataset.end);
+      activateLines(s, e);
+    } else {
+      entry.target.classList.remove('in-view');
+      // Clear stale highlight when the active section leaves the viewport
+      const sec = entry.target;
+      const key = parseInt(sec.dataset.start)+'-'+parseInt(sec.dataset.end);
+      if(currentSection === key) {
+        document.querySelectorAll('.code-table tr.hl-active').forEach(r=>r.classList.remove('hl-active'));
+        currentSection = null;
+      }
+    }
+  });
+}, {root: document.getElementById('lessonPanel'), threshold:[0.1,0.3,0.5]});
+
+document.querySelectorAll('.lesson-section').forEach(s=>observer.observe(s));
+
+// init
+activateLines(1, 9);
+</script>
+</body>
+</html>
